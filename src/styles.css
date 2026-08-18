@@ -94,3 +94,8 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
 .vendor-panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
 .vendor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .vendor-head b { font-size: 15px; }
+
+/* ปุ่มกาง/หุบ วางจากไลน์ */
+.acc-toggle { background: none; border: none; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; padding: 4px 0; }
+textarea { font-family: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
