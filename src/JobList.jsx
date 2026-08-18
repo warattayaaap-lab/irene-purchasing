@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
+import { deleteJob } from './lib.js'
 
 const STATUS_ORDER = ['ใหม่', 'กำลังขอราคา', 'สั่งแล้ว', 'ยกเลิก']
 const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })
@@ -35,6 +36,17 @@ export default function JobList({ onOpen, onPrice }) {
       .order('job_no', { ascending: false })
     if (error) { setError(error.message); setLoading(false); return }
     setJobs(data || []); setLoading(false)
+  }
+
+  async function handleDelete(e, job) {
+    e.stopPropagation()  // กันเปิดงานตอนกดลบ
+    if (!confirm('ลบงาน ' + job.job_no + (job.requester ? ' (' + job.requester + ')' : '') + ' ถาวร?\nเอาคืนไม่ได้')) return
+    try {
+      await deleteJob(job.id)
+      setJobs(arr => arr.filter(x => x.id !== job.id))
+    } catch (err) {
+      alert('ลบไม่สำเร็จ: ' + err.message)
+    }
   }
 
   const requesters = [...new Set(jobs.map(j => (j.requester||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'th'))
@@ -108,6 +120,7 @@ export default function JobList({ onOpen, onPrice }) {
                   <div className="r">
                     {j.total > 0 && <div className="amt">{fmt(j.total)} ฿</div>}
                     <span className={'status s-' + j.status}>{j.status}</span>
+                    <button className="card-del" onClick={(e) => handleDelete(e, j)} title="ลบงาน">🗑</button>
                   </div>
                 </div>
               )
