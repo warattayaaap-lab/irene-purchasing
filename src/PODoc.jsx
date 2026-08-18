@@ -57,11 +57,17 @@ export default function PODoc({ job, items, onClose }) {
       ${vendor&&vendor.address?`<br><b>ที่อยู่:</b> ${esc(vendor.address)}`:''}
       ${vendor&&vendor.tax_id?`<br><b>เลขที่ภาษี:</b> ${esc(vendor.tax_id)}`:''}</div></div>` : ''
 
-    const signBlock = `<div class="sign"><div>
-         <div style="font-family:'${cfg.sig_font||'Itim'}',cursive;font-size:26px;margin-bottom:2px;">${esc(cfg.po_signer||'')}</div>
-         <div class="l">ผู้สั่งซื้อ (${esc(cfg.po_signer||'')})</div>
-         <span class="muted">วันที่ ${today}</span></div>
-         <div><div class="l" style="margin-top:44px;">ผู้อนุมัติ</div><span class="muted">วันที่ ___/___/___</span></div></div>`
+    const signBlock = `<div class="sign">
+      <div class="sign-col">
+        <div class="sign-name" style="font-family:'${cfg.sig_font||'Itim'}',cursive;">${esc(cfg.po_signer||'')}</div>
+        <div class="l">ผู้สั่งซื้อ (${esc(cfg.po_signer||'')})</div>
+        <span class="muted">วันที่ ${today}</span>
+      </div>
+      <div class="sign-col">
+        <div class="sign-name">&nbsp;</div>
+        <div class="l">ผู้อนุมัติ</div>
+        <span class="muted">วันที่ ___/___/___</span>
+      </div></div>`
 
     w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">
       <title>PO ${esc(job.job_no)}</title>
@@ -76,8 +82,10 @@ export default function PODoc({ job, items, onClose }) {
         th,td{border:1px solid #b8c4bf;padding:7px 9px;}th{background:#eef3f1;font-weight:500;}
         .c{text-align:center}.r{text-align:right}.sum td{border:none;padding:5px 9px;}
         .grand td{font-weight:600;font-size:15px;border-top:2px solid #1a2b26;}
-        .sign{display:flex;justify-content:space-around;margin-top:56px;text-align:center;font-size:13px;}
-        .sign div{width:220px;}.sign .l{border-top:1px solid #1a2b26;padding-top:6px;margin-top:30px;}
+        .sign{display:flex;justify-content:space-around;margin-top:64px;text-align:center;font-size:13px;}
+        .sign-col{width:240px;display:flex;flex-direction:column;align-items:center;}
+        .sign-name{font-size:26px;height:34px;line-height:34px;margin-bottom:4px;}
+        .sign .l{border-top:1px solid #1a2b26;padding-top:6px;width:100%;}
         @media print{body{margin:0 auto;}}
       </style></head><body>
       <div class="head"><div><b>${esc(cfg.company_name||'')}</b></div>
