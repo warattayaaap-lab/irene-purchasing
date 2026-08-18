@@ -14,6 +14,9 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [newShop, setNewShop] = useState('')
   const [origStatus, setOrigStatus] = useState('')
   const [vendor, setVendor] = useState({ short_name:'', full_name:'', branch:'', address:'', tax_id:'' })
+  const [oneShop, setOneShop] = useState('')
+  const [pasteBox, setPasteBox] = useState(false)
+  const [pasteText, setPasteText] = useState('')
 
   useEffect(() => { init() }, [jobId])
 
@@ -91,6 +94,36 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     catch (e) { setErr(e.message) }
   }
 
+  // ใช้ร้านเดียวกับทุกรายการ (สั่งตรง ไม่เทียบ)
+  function applyOneShop() {
+    const sh = oneShop.trim()
+    if (!sh) return
+    setItems(arr => arr.map(it => ({ ...it, compare: false, shop: sh })))
+    set('chosen_shop', '')
+  }
+
+  // วางรายการจากข้อความไลน์ (บรรทัดละรายการ)
+  function applyPaste() {
+    const lines = pasteText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    if (!lines.length) { setPasteBox(false); return }
+    const parsed = lines.map(line => {
+      const clean = line.replace(/^[-\u2022*]\s*/, '')
+      const m = clean.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(\S*)$/)
+      if (m) return { ...blankItem(), name: m[1].trim(), qty: m[2], unit: m[3] || '' }
+      return { ...blankItem(), name: clean }
+    })
+    setItems(arr => {
+      const nonEmpty = arr.filter(it => String(it.name||'').trim())
+      return [...nonEmpty, ...parsed]
+    })
+    setPasteText(''); setPasteBox(false)
+  }
+
+  // ลบรูปแนบ
+  function delImage(idx) {
+    set('images', (job.images||[]).filter((_,i)=>i!==idx))
+  }
+
   // คัดลอกรายการส่งร้าน
   function copyItems() {
     const list = items.filter(it => String(it.name||'').trim())
@@ -166,6 +199,42 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
           <button className="add-row" onClick={addItem} style={{flex:'0 0 auto'}}>+ เพิ่มรายการ</button>
           <button className="add-row" onClick={copyItems} style={{flex:1}}>📋 คัดลอกส่งร้าน</button>
         </div>
+
+        {/* สั่งตรงร้านเดียวทั้งงาน */}
+        <div style={{display:'flex',gap:8,marginTop:10,alignItems:'center',flexWrap:'wrap'}}>
+          <input value={oneShop} onChange={e=>setOneShop(e.target.value)} placeholder="สั่งตรงร้านเดียวทั้งงาน? พิมพ์/เลือกร้าน…" style={{flex:1,minWidth:200}} />
+          <button className="btn ghost" onClick={applyOneShop}>ใช้ร้านนี้ทุกรายการ</button>
+        </div>
+
+        {/* วางรายการจากไลน์ */}
+        <div style={{marginTop:8}}>
+          <button className="acc-toggle" onClick={()=>setPasteBox(!pasteBox)}>{pasteBox?'▾':'▸'} วางรายการจากไลน์ทั้งก้อน</button>
+          {pasteBox && (
+            <div style={{marginTop:8}}>
+              <textarea value={pasteText} onChange={e=>setPasteText(e.target.value)} rows={5} placeholder={'วางข้อความจากไลน์ บรรทัดละรายการ เช่น\nปูนก่อ 10 ถุง\nอิฐมอญ 500 ก้อน'} style={{width:'100%',resize:'vertical'}} />
+              <button className="btn ghost" onClick={applyPaste} style={{marginTop:6}}>เพิ่มรายการจากข้อความ</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* รูปแนบ — โพย/รูปที่หน้างานถ่ายส่งมา */}
+      <div className="card-box">
+        <div className="box-title">รูปแนบ <span className="hint">— โพย/รายการที่หน้างานถ่ายส่งมา</span></div>
+        {(job.images && job.images.length > 0) ? (
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {job.images.map((im,i)=>(
+              <div key={i} style={{position:'relative'}}>
+                <a href={im.url||im.thumb} target="_blank" rel="noreferrer">
+                  <img src={im.thumb||im.url} alt={'รูป '+(i+1)} style={{width:96,height:96,objectFit:'cover',borderRadius:10,border:'1px solid var(--line)'}} />
+                </a>
+                <b onClick={()=>delImage(i)} style={{position:'absolute',top:-8,right:-8,background:'#fff',border:'1px solid var(--line)',borderRadius:'50%',width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14}}>×</b>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{textAlign:'center',color:'var(--muted)',padding:'18px',border:'1px dashed var(--line)',borderRadius:10}}>📷 ยังไม่มีรูปแนบ (รูปจากหน้างานจะมาโผล่ที่นี่)</div>
+        )}
       </div>
 
       {/* เทียบราคา — panel แยก แบบในรูป */}
