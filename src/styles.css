@@ -89,3 +89,8 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
 .cmp-in.cheap { border-color: var(--accent); background: #f0faf6; font-weight: 600; color: var(--accent); }
 .cmp-sum td { border-top: 2px solid var(--ink); font-size: 14px; }
 .cheap-tag { display: inline-block; background: var(--accent); color: #fff; font-size: 11px; padding: 1px 8px; border-radius: 999px; margin-top: 3px; }
+
+/* พาเนลข้อมูลผู้ขาย (PO) */
+.vendor-panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.vendor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.vendor-head b { font-size: 15px; }
