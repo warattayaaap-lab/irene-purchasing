@@ -7,7 +7,7 @@ const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qt
 export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [job, setJob] = useState(null)
   const [items, setItems] = useState([])
-  const [shops, setShops] = useState([])       // ร้านสำหรับเทียบราคา
+  const [shops, setShops] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -21,20 +21,18 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     if (jobId === 'new') {
       const no = await nextJobNo()
       setJob({ job_no: no, job_date: new Date().toISOString().slice(0,10), requester:'', project:'', purpose:'', note:'', status:'ใหม่', po_no:'', chosen_shop:'', eta:'', eta_time:'', delivery:'', order_by:'', need_by:'', images:[], shop_eta:{} })
-      setItems([blankItem()]); setShops([]); setLoading(false); return
+      setItems([blankItem()]); setShops([]); setOrigStatus('ใหม่'); setLoading(false); return
     }
     const { data: j, error: e1 } = await supabase.from('jobs').select('*').eq('id', jobId).single()
     if (e1) { setErr(e1.message); setLoading(false); return }
     const { data: its } = await supabase.from('job_items').select('*').eq('job_id', jobId).order('sort_order')
     const rows = (its || []).map(it => ({ ...it, _k: String(it.id), quotes: it.quotes || {} }))
-    // รวมร้านจาก quotes + chosen
     const shopSet = new Set()
     rows.forEach(it => Object.keys(it.quotes || {}).forEach(s => shopSet.add(s)))
     if (j.chosen_shop) shopSet.add(j.chosen_shop)
     setJob({ ...j, job_date: j.job_date || '', eta: j.eta || '', need_by: j.need_by || '' })
-    setOrigStatus(j.status)
     setItems(rows.length ? rows : [blankItem()])
-    setShops([...shopSet])
+    setShops([...shopSet]); setOrigStatus(j.status)
     setLoading(false)
   }
 
@@ -59,7 +57,6 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     setSaving(true); setErr('')
     try {
       const id = await saveJob(job, items)
-      // ยิงแจ้งเตือน LINE เมื่อสถานะเปลี่ยนเป็น สั่งแล้ว/ยกเลิก (และไม่ใช่หน้างานสั่งเอง)
       const statusChanged = job.status !== origStatus
       const shouldNotify = statusChanged && (job.status === 'สั่งแล้ว' || job.status === 'ยกเลิก')
       let notifyMsg = ''
@@ -81,11 +78,30 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     catch (e) { setErr(e.message) }
   }
 
+  // คัดลอกรายการส่งร้าน
+  function copyItems() {
+    const list = items.filter(it => String(it.name||'').trim())
+    if (!list.length) { alert('ยังไม่มีรายการ'); return }
+    const byShop = {}, order = []
+    list.forEach(it => {
+      let shop = it.compare ? (job.chosen_shop||'') : String(it.shop||'').trim()
+      if (!shop) shop = '__none__'
+      if (!byShop[shop]) { byShop[shop] = []; order.push(shop) }
+      let line = it.name
+      if (it.qty) line += ' ' + it.qty + (it.unit ? ' ' + it.unit : '')
+      byShop[shop].push(line)
+    })
+    let text
+    if (order.length === 1) text = byShop[order[0]].join('\n')
+    else text = order.map(sh => (sh==='__none__'?'(ยังไม่ระบุร้าน)':'📍 '+sh) + '\n' + byShop[sh].join('\n')).join('\n\n')
+    navigator.clipboard?.writeText(text).then(()=>alert('คัดลอกแล้ว ✓ วางส่งร้านได้เลย')).catch(()=>alert('คัดลอกไม่ได้'))
+  }
+
   if (loading) return <div className="wrap"><p className="loading">กำลังโหลด…</p></div>
   if (!job) return <div className="wrap"><p className="empty" style={{color:'var(--danger)'}}>{err}</p><button className="btn ghost" onClick={()=>onBack()}>← กลับ</button></div>
 
   const total = calcTotal(items, job.chosen_shop)
-  const hasCompareItems = items.some(it => it.compare)
+  const compareItems = items.filter(it => it.compare && String(it.name||'').trim())
 
   return (
     <div className="wrap">
@@ -97,99 +113,127 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
       {err && <div className="panel" style={{color:'var(--danger)', marginBottom:12}}>{err}</div>}
 
       {/* ข้อมูลงาน */}
-      <div className="grid2">
-        <Field label="ผู้ขอ"><input value={job.requester} onChange={e=>set('requester',e.target.value)} placeholder="ช่าง / ชื่อคนขอ" /></Field>
-        <Field label="โปรเจกต์ / บ้าน"><input value={job.project} onChange={e=>set('project',e.target.value)} placeholder="เช่น บ้านเจมส์" /></Field>
-        <Field label="สถานะ">
-          <select value={job.status} onChange={e=>set('status',e.target.value)}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select>
-        </Field>
-        <Field label="เลข PO / บิล (ถ้ามี)"><input value={job.po_no} onChange={e=>set('po_no',e.target.value)} placeholder="จาก PEAK" /></Field>
-        <Field label="ใช้ทำอะไร"><input value={job.purpose} onChange={e=>set('purpose',e.target.value)} placeholder="เช่น งานก่อฉาบชั้น 2" /></Field>
-        <Field label="หมายเหตุ"><input value={job.note} onChange={e=>set('note',e.target.value)} placeholder="เช่น ของด่วน" /></Field>
-        <Field label="ของถึงประมาณ"><input type="date" value={job.eta||''} onChange={e=>set('eta',e.target.value)} /></Field>
-        <Field label="ช่วงเวลา">
-          <select value={job.eta_time} onChange={e=>set('eta_time',e.target.value)}>
-            <option value="">ไม่ระบุ</option>{ETA_TIMES.filter(Boolean).map(t=><option key={t}>{t}</option>)}
-          </select>
-        </Field>
-        <Field label="การรับของ">
-          <select value={job.delivery} onChange={e=>set('delivery',e.target.value)}><option value="">ร้านจัดส่ง</option><option>ไปรับเอง</option></select>
-        </Field>
-        <Field label="ใครเป็นคนสั่ง">
-          <select value={job.order_by} onChange={e=>set('order_by',e.target.value)}><option value="">จัดซื้อสั่ง</option><option>หน้างานสั่งเอง</option></select>
-        </Field>
+      <div className="card-box">
+        <div className="grid2">
+          <Field label="ผู้ขอ"><input value={job.requester} onChange={e=>set('requester',e.target.value)} placeholder="ช่าง / ชื่อคนขอ" /></Field>
+          <Field label="โปรเจกต์ / บ้าน"><input value={job.project} onChange={e=>set('project',e.target.value)} placeholder="เช่น บ้านเจมส์" /></Field>
+          <Field label="สถานะ"><select value={job.status} onChange={e=>set('status',e.target.value)}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></Field>
+          <Field label="เลข PO / บิล (ถ้ามี)"><input value={job.po_no} onChange={e=>set('po_no',e.target.value)} placeholder="จาก PEAK หรือเลขบิล" /></Field>
+          <Field label="ของถึงประมาณ"><input type="date" value={job.eta||''} onChange={e=>set('eta',e.target.value)} /></Field>
+          <Field label="ช่วงเวลา"><select value={job.eta_time} onChange={e=>set('eta_time',e.target.value)}><option value="">ไม่ระบุ</option>{ETA_TIMES.filter(Boolean).map(t=><option key={t}>{t}</option>)}</select></Field>
+          <Field label="การรับของ"><select value={job.delivery} onChange={e=>set('delivery',e.target.value)}><option value="">ร้านจัดส่ง</option><option>ไปรับเอง</option></select></Field>
+          <Field label="ต้องการใช้ (หน้างานระบุ)"><input type="date" value={job.need_by||''} onChange={e=>set('need_by',e.target.value)} /></Field>
+          <Field label="ใครเป็นคนสั่ง"><select value={job.order_by} onChange={e=>set('order_by',e.target.value)}><option value="">จัดซื้อสั่ง</option><option>หน้างานสั่งเอง</option></select></Field>
+          <Field label="ใช้ทำอะไร"><input value={job.purpose} onChange={e=>set('purpose',e.target.value)} placeholder="เช่น งานก่อฉาบชั้น 2" /></Field>
+          <Field label="หมายเหตุ"><input value={job.note} onChange={e=>set('note',e.target.value)} placeholder="เช่น ของด่วน" /></Field>
+        </div>
       </div>
 
-      {/* ร้านเทียบราคา */}
-      <div className="section-title">ร้านสำหรับเทียบราคา</div>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:10}}>
-        {shops.map(s => (
-          <span key={s} className="chip on" style={{display:'flex',gap:6,alignItems:'center'}}>
-            {s}<b style={{cursor:'pointer'}} onClick={()=>removeShop(s)}>×</b>
-          </span>
-        ))}
-        <input value={newShop} onChange={e=>setNewShop(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addShop()} placeholder="เพิ่มร้าน…" style={{maxWidth:160}} />
-        <button className="btn ghost" onClick={addShop}>+ ร้าน</button>
-      </div>
-
-      {/* รายการของ */}
-      <div className="section-title">รายการของ</div>
-      <div style={{overflowX:'auto'}}>
-        <table className="etable">
-          <thead>
-            <tr>
-              <th style={{textAlign:'left',minWidth:160}}>ชื่อของ</th>
-              <th style={{width:70}}>จำนวน</th><th style={{width:70}}>หน่วย</th>
-              <th style={{width:56}}>เทียบ</th>
-              {shops.map(s => <th key={s} style={{width:90}}>{s}</th>)}
-              <th style={{width:110}}>ร้าน/ราคา (สั่งตรง)</th>
-              <th style={{width:36}}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map(it => (
-              <tr key={it._k}>
-                <td><input value={it.name} onChange={e=>setItem(it._k,'name',e.target.value)} placeholder="เช่น ปูนก่อ" /></td>
-                <td><input value={it.qty} onChange={e=>setItem(it._k,'qty',e.target.value)} type="number" style={{textAlign:'right'}} /></td>
-                <td><input value={it.unit} onChange={e=>setItem(it._k,'unit',e.target.value)} placeholder="ถุง" /></td>
-                <td style={{textAlign:'center'}}><input type="checkbox" checked={!!it.compare} onChange={e=>setItem(it._k,'compare',e.target.checked)} /></td>
-                {shops.map(s => (
-                  <td key={s}>{it.compare ? <input value={it.quotes[s]||''} onChange={e=>setQuote(it._k,s,e.target.value)} type="number" style={{textAlign:'right'}} placeholder="-" /> : <span style={{color:'var(--muted)'}}>—</span>}</td>
-                ))}
-                <td>{!it.compare ? (
-                  <div style={{display:'flex',gap:4}}>
-                    <input value={it.shop} onChange={e=>setItem(it._k,'shop',e.target.value)} placeholder="ร้าน" style={{width:'52%'}} />
-                    <input value={it.price} onChange={e=>setItem(it._k,'price',e.target.value)} type="number" placeholder="฿" style={{width:'44%',textAlign:'right'}} />
-                  </div>
-                ) : <span style={{color:'var(--muted)'}}>ใช้ราคาเทียบ</span>}</td>
-                <td style={{textAlign:'center'}}><b style={{cursor:'pointer',color:'var(--muted)'}} onClick={()=>delItem(it._k)}>×</b></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <button className="btn ghost" onClick={addItem} style={{marginTop:8}}>+ เพิ่มรายการ</button>
-
-      {/* เลือกร้านสุดท้าย (ถ้ามีเทียบ) */}
-      {hasCompareItems && shops.length > 0 && (
-        <>
-          <div className="section-title">เลือกร้านที่สั่ง</div>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            {shops.map(s => {
-              const sum = items.reduce((a,it)=> it.compare ? a + Number(it.quotes[s]||0)*Number(it.qty||0) : a, 0)
-              const on = job.chosen_shop === s
-              return <span key={s} className={'chip'+(on?' on':'')} onClick={()=>set('chosen_shop',s)}>{s} · {fmt(sum)} ฿</span>
-            })}
+      {/* รายการของ — แบบช่องยาว */}
+      <div className="card-box">
+        <div className="box-title">รายการของ <span className="hint">— ติ๊ก "เทียบ" เฉพาะรายการที่ต้องขอราคาหลายเจ้า</span></div>
+        {items.map(it => (
+          <div className="item-row" key={it._k}>
+            <input className="i-name" value={it.name} onChange={e=>setItem(it._k,'name',e.target.value)} placeholder="ชื่อของ" />
+            <input className="i-qty" value={it.qty} onChange={e=>setItem(it._k,'qty',e.target.value)} type="number" placeholder="จำนวน" />
+            <input className="i-unit" value={it.unit} onChange={e=>setItem(it._k,'unit',e.target.value)} placeholder="หน่วย" />
+            <button className={'i-cmp'+(it.compare?' on':'')} onClick={()=>setItem(it._k,'compare',!it.compare)}>{it.compare?'✓ เทียบ':'เทียบ'}</button>
+            {!it.compare ? (
+              <>
+                <input className="i-shop" value={it.shop} onChange={e=>setItem(it._k,'shop',e.target.value)} placeholder="ร้านที่สั่ง" />
+                <input className="i-price" value={it.price} onChange={e=>setItem(it._k,'price',e.target.value)} type="number" placeholder="ราคา/หน่วย" />
+              </>
+            ) : <span className="i-cmpnote">ใช้ราคาเทียบด้านล่าง</span>}
+            <button className="i-del" onClick={()=>delItem(it._k)}>×</button>
           </div>
-        </>
+        ))}
+        <div style={{display:'flex',gap:8,marginTop:4}}>
+          <button className="add-row" onClick={addItem} style={{flex:'0 0 auto'}}>+ เพิ่มรายการ</button>
+          <button className="add-row" onClick={copyItems} style={{flex:1}}>📋 คัดลอกส่งร้าน</button>
+        </div>
+      </div>
+
+      {/* เทียบราคา — panel แยก แบบในรูป */}
+      {compareItems.length > 0 && (
+        <div className="card-box compare-box">
+          <div className="box-title">เปรียบเทียบราคา <span className="hint">(เฉพาะรายการที่ติ๊กเทียบ)</span></div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
+            {shops.map(s => (
+              <span key={s} className="chip on" style={{display:'flex',gap:6,alignItems:'center'}}>{s}<b style={{cursor:'pointer'}} onClick={()=>removeShop(s)}>×</b></span>
+            ))}
+            <input value={newShop} onChange={e=>setNewShop(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addShop()} placeholder="พิมพ์ชื่อร้าน แล้ว Enter" style={{maxWidth:200}} />
+          </div>
+
+          {shops.length > 0 && (
+            <div style={{overflowX:'auto'}}>
+              <table className="cmp-table">
+                <thead>
+                  <tr><th style={{textAlign:'left'}}>รายการ</th>{shops.map(s => {
+                    const on = job.chosen_shop===s
+                    return <th key={s} className={on?'chosen':''}>{s}</th>
+                  })}</tr>
+                </thead>
+                <tbody>
+                  {compareItems.map(it => {
+                    const prices = shops.map(s=>it.quotes[s]).filter(v=>v!==''&&v!=null&&v!==undefined).map(Number)
+                    const min = prices.length?Math.min(...prices):null
+                    // ราคาล่าสุด/ร้านล่าสุด (แสดงใต้ชื่อ)
+                    return (
+                      <tr key={it._k}>
+                        <td style={{textAlign:'left'}}><b>{it.name}</b><div className="hint">{fmt(it.qty)} {it.unit}</div></td>
+                        {shops.map(s => {
+                          const v = it.quotes[s]
+                          const num = (v===''||v==null)?null:Number(v)
+                          const cheap = num!==null && num===min
+                          const on = job.chosen_shop===s
+                          return (
+                            <td key={s} className={on?'chosen':''}>
+                              <input value={it.quotes[s]||''} onChange={e=>setQuote(it._k,s,e.target.value)} type="number" className={'cmp-in'+(cheap?' cheap':'')} />
+                              {num!==null && it.qty && <div className="hint">= {fmt(num*Number(it.qty))}</div>}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
+                  <tr className="cmp-sum">
+                    <td style={{textAlign:'left',fontWeight:600}}>ราคารวมต่อร้าน</td>
+                    {shops.map(s => {
+                      const sum = compareItems.reduce((a,it)=>a+Number(it.quotes[s]||0)*Number(it.qty||0),0)
+                      const allSums = shops.map(sh=>compareItems.reduce((a,it)=>a+Number(it.quotes[sh]||0)*Number(it.qty||0),0)).filter(x=>x>0)
+                      const cheapest = allSums.length?Math.min(...allSums):null
+                      const isCheap = sum>0 && sum===cheapest
+                      const on = job.chosen_shop===s
+                      return (
+                        <td key={s} className={on?'chosen':''}>
+                          <b>{fmt(sum)} ฿</b>
+                          {isCheap && <div className="cheap-tag">ถูกสุด</div>}
+                          {!isCheap && sum>0 && cheapest && <div className="hint" style={{color:'var(--danger)'}}>แพงกว่า +{fmt(sum-cheapest)} ฿</div>}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                  <tr>
+                    <td></td>
+                    {shops.map(s => {
+                      const on = job.chosen_shop===s
+                      return <td key={s} style={{textAlign:'center',padding:'8px'}}>
+                        <button className={on?'btn':'btn ghost'} style={{fontSize:13,padding:'6px 12px'}} onClick={()=>set('chosen_shop', on?'':s)}>{on?'✓ ร้านที่เลือก':'เลือกร้านนี้'}</button>
+                      </td>
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
       <p style={{fontSize:18,fontWeight:600,marginTop:16}}>ยอดรวม {fmt(total)} ฿</p>
 
-      {/* ปุ่มล่าง */}
-      <div style={{display:'flex',gap:8,marginTop:20,flexWrap:'wrap'}}>
+      <div style={{display:'flex',gap:8,marginTop:16,flexWrap:'wrap'}}>
         <button className="btn" onClick={doSave} disabled={saving}>{saving?'กำลังบันทึก…':'บันทึกงาน'}</button>
-        {job.id && <button className="btn ghost" onClick={()=>onOpenPO(job, items, shops)}>🧾 พิมพ์ PO</button>}
+        {job.id && <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🧾 พิมพ์ PO</button>}
         {job.id && <button className="btn ghost" style={{color:'var(--danger)',borderColor:'#e6c9c9'}} onClick={doDelete}>ลบงาน</button>}
       </div>
     </div>
