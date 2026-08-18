@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react'
-import { loadSettings, fmt, fmtDateLong } from './lib.js'
+import { loadSettings, loadVendor, fmt, fmtDateLong } from './lib.js'
 
 // สร้างเอกสารใบสั่งซื้อ (PO) แล้วเปิดหน้าต่างพิมพ์
 export default function PODoc({ job, items, onClose }) {
   const [cfg, setCfg] = useState(null)
-  useEffect(() => { loadSettings().then(setCfg) }, [])
-  if (!cfg) return <div className="wrap"><p className="loading">กำลังเตรียมเอกสาร…</p></div>
+  const [vendor, setVendor] = useState(null)
+  useEffect(() => {
+    loadSettings().then(setCfg)
+    if (job.chosen_shop) loadVendor(job.chosen_shop).then(v => setVendor(v || {}))
+    else setVendor({})
+  }, [])
+  if (!cfg || vendor === null) return <div className="wrap"><p className="loading">กำลังเตรียมเอกสาร…</p></div>
 
   const chosen = job.chosen_shop
 
@@ -27,7 +32,7 @@ export default function PODoc({ job, items, onClose }) {
   function printDoc() {
     const w = window.open('', '_blank')
     const today = fmtDateLong(new Date().toISOString().slice(0,10))
-    const vendorName = chosen || (items.find(i=>!i.compare)?.shop) || ''
+    const vendorName = (vendor && vendor.full_name) || chosen || (items.find(i=>!i.compare)?.shop) || ''
 
     const itemsHtml = rows.map((r,i)=>`<tr>
       <td class="c">${i+1}</td><td>${esc(r.name)}</td>
@@ -47,7 +52,10 @@ export default function PODoc({ job, items, onClose }) {
       <b>ที่อยู่:</b> ${esc(cfg.company_address||'')}<br>
       <b>เลขที่ภาษี:</b> ${esc(cfg.company_tax_id||'')}</div></div>`
 
-    const vendorBlock = vendorName ? `<div style="margin-top:10px;"><b>ผู้ขาย:</b> <b>${esc(vendorName)}</b></div>` : ''
+    const vendorBlock = vendorName ? `<div class="head" style="margin-top:10px;"><div>
+      <b>ผู้ขาย:</b> <b>${esc(vendorName)}</b>${vendor&&vendor.branch?` <span class="muted">(${esc(vendor.branch)})</span>`:''}
+      ${vendor&&vendor.address?`<br><b>ที่อยู่:</b> ${esc(vendor.address)}`:''}
+      ${vendor&&vendor.tax_id?`<br><b>เลขที่ภาษี:</b> ${esc(vendor.tax_id)}`:''}</div></div>` : ''
 
     const signBlock = `<div class="sign"><div>
          <div style="font-family:'${cfg.sig_font||'Itim'}',cursive;font-size:26px;margin-bottom:2px;">${esc(cfg.po_signer||'')}</div>
