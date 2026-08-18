@@ -155,3 +155,22 @@ export async function notifyLine(type, job, items) {
     return { ok: false, error: String(e) }
   }
 }
+
+// โหลดข้อมูลร้าน (vendor) จากชื่อสั้น
+export async function loadVendor(shortName) {
+  if (!shortName) return null
+  const { data } = await supabase.from('vendors').select('*').eq('short_name', shortName).maybeSingle()
+  return data
+}
+
+// บันทึก/อัปเดตข้อมูลร้าน (จำไว้ใช้ครั้งหน้า)
+export async function saveVendor(v) {
+  if (!v.short_name) return
+  const { data: existing } = await supabase.from('vendors').select('id').eq('short_name', v.short_name).maybeSingle()
+  const payload = {
+    short_name: v.short_name, full_name: v.full_name || '', branch: v.branch || '',
+    address: v.address || '', tax_id: v.tax_id || '',
+  }
+  if (existing) await supabase.from('vendors').update(payload).eq('id', existing.id)
+  else await supabase.from('vendors').insert(payload)
+}
