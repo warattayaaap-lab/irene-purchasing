@@ -114,7 +114,7 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
 
       {/* ข้อมูลงาน */}
       <div className="card-box">
-        <div className="grid2">
+        <div className="grid4">
           <Field label="ผู้ขอ"><input value={job.requester} onChange={e=>set('requester',e.target.value)} placeholder="ช่าง / ชื่อคนขอ" /></Field>
           <Field label="โปรเจกต์ / บ้าน"><input value={job.project} onChange={e=>set('project',e.target.value)} placeholder="เช่น บ้านเจมส์" /></Field>
           <Field label="สถานะ"><select value={job.status} onChange={e=>set('status',e.target.value)}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></Field>
@@ -124,6 +124,8 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
           <Field label="การรับของ"><select value={job.delivery} onChange={e=>set('delivery',e.target.value)}><option value="">ร้านจัดส่ง</option><option>ไปรับเอง</option></select></Field>
           <Field label="ต้องการใช้ (หน้างานระบุ)"><input type="date" value={job.need_by||''} onChange={e=>set('need_by',e.target.value)} /></Field>
           <Field label="ใครเป็นคนสั่ง"><select value={job.order_by} onChange={e=>set('order_by',e.target.value)}><option value="">จัดซื้อสั่ง</option><option>หน้างานสั่งเอง</option></select></Field>
+        </div>
+        <div className="grid2" style={{marginTop:12}}>
           <Field label="ใช้ทำอะไร"><input value={job.purpose} onChange={e=>set('purpose',e.target.value)} placeholder="เช่น งานก่อฉาบชั้น 2" /></Field>
           <Field label="หมายเหตุ"><input value={job.note} onChange={e=>set('note',e.target.value)} placeholder="เช่น ของด่วน" /></Field>
         </div>
