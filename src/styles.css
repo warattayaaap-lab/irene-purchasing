@@ -99,3 +99,8 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
 .acc-toggle { background: none; border: none; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; padding: 4px 0; }
 textarea { font-family: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
 textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* ปุ่มลบในการ์ดหน้าแรก */
+.card { position: relative; }
+.card-del { background: none; border: none; cursor: pointer; font-size: 15px; opacity: .35; padding: 4px 6px; border-radius: 7px; margin-top: 4px; transition: opacity .15s, background .15s; }
+.card-del:hover { opacity: 1; background: #f6ecec; }
