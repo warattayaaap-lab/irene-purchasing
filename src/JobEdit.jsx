@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
-import { STATUSES, ETA_TIMES, fmt, nextJobNo, saveJob, deleteJob, calcTotal, notifyLine } from './lib.js'
+import { STATUSES, ETA_TIMES, fmt, nextJobNo, saveJob, deleteJob, calcTotal, notifyLine, loadVendor, saveVendor } from './lib.js'
 
 const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {} })
 
@@ -13,8 +13,19 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [err, setErr] = useState('')
   const [newShop, setNewShop] = useState('')
   const [origStatus, setOrigStatus] = useState('')
+  const [vendor, setVendor] = useState({ short_name:'', full_name:'', branch:'', address:'', tax_id:'' })
 
   useEffect(() => { init() }, [jobId])
+
+  // โหลดข้อมูลร้านเมื่อเลือกร้าน (จำจากครั้งก่อน)
+  useEffect(() => {
+    const shop = job?.chosen_shop
+    if (!shop) { setVendor({ short_name:'', full_name:'', branch:'', address:'', tax_id:'' }); return }
+    loadVendor(shop).then(v => {
+      if (v) setVendor({ short_name: v.short_name, full_name: v.full_name||'', branch: v.branch||'', address: v.address||'', tax_id: v.tax_id||'' })
+      else setVendor({ short_name: shop, full_name:'', branch:'', address:'', tax_id:'' })
+    })
+  }, [job?.chosen_shop])
 
   async function init() {
     setLoading(true); setErr('')
@@ -57,6 +68,8 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     setSaving(true); setErr('')
     try {
       const id = await saveJob(job, items)
+      // จำข้อมูลร้านไว้ใช้ครั้งหน้า
+      if (job.chosen_shop && vendor.short_name) await saveVendor(vendor)
       const statusChanged = job.status !== origStatus
       const shouldNotify = statusChanged && (job.status === 'สั่งแล้ว' || job.status === 'ยกเลิก')
       let notifyMsg = ''
@@ -228,6 +241,26 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* พาเนลใบสั่งซื้อ PO — โผล่เมื่อเลือกร้านแล้ว */}
+      {job.chosen_shop && (
+        <div className="card-box">
+          <div className="box-title">ใบสั่งซื้อ (PO)</div>
+          <div className="vendor-panel">
+            <div className="vendor-head">
+              <b>{job.chosen_shop}</b>
+              {job.id && <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🖨️ พิมพ์ PO</button>}
+            </div>
+            <div className="grid2">
+              <Field label="ชื่อเต็มบริษัทผู้ขาย"><input value={vendor.full_name} onChange={e=>setVendor(v=>({...v,full_name:e.target.value}))} placeholder="เช่น บริษัท วีระพานิช เชียงใหม่ จำกัด" /></Field>
+              <Field label="สาขา"><input value={vendor.branch} onChange={e=>setVendor(v=>({...v,branch:e.target.value}))} placeholder="สำนักงานใหญ่" /></Field>
+              <Field label="ที่อยู่"><input value={vendor.address} onChange={e=>setVendor(v=>({...v,address:e.target.value}))} placeholder="เลขที่ หมู่ ตำบล อำเภอ จังหวัด รหัสไปรษณีย์" /></Field>
+              <Field label="เลขผู้เสียภาษี"><input value={vendor.tax_id} onChange={e=>setVendor(v=>({...v,tax_id:e.target.value}))} placeholder="0505XXXXXXXXX" /></Field>
+            </div>
+            <p className="hint" style={{marginTop:8}}>กรอกครั้งแรกครั้งเดียว — ระบบจดจำร้านนี้ไว้ ใช้งานครั้งหน้าขึ้นเองอัตโนมัติ</p>
+          </div>
         </div>
       )}
 
