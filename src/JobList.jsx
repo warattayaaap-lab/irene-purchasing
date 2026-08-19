@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
-import { deleteJob } from './lib.js'
+import { deleteJob, notifyLine } from './lib.js'
 import * as XLSX from 'xlsx'
 
 const STATUS_ORDER = ['ใหม่', 'กำลังขอราคา', 'สั่งแล้ว', 'ยกเลิก']
@@ -66,6 +66,28 @@ export default function JobList({ onOpen, onPrice }) {
       alert('สำรองไม่สำเร็จ: ' + e.message)
     }
     setBacking(false)
+  }
+
+  async function quickStatus(e, job, newStatus) {
+    e.stopPropagation()
+    if (newStatus === job.status) return
+    // อัปเดตหน้าจอทันที (optimistic)
+    setJobs(arr => arr.map(x => x.id === job.id ? { ...x, status: newStatus } : x))
+    try {
+      await supabase.from('jobs').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', job.id)
+      // ยิงไลน์ถ้าเปลี่ยนเป็นสั่งแล้ว/ยกเลิก
+      if (newStatus === 'สั่งแล้ว' || newStatus === 'ยกเลิก') {
+        const { data: full } = await supabase.from('jobs').select('*').eq('id', job.id).single()
+        const { data: its } = await supabase.from('job_items').select('*').eq('job_id', job.id).order('sort_order')
+        const r = await notifyLine('order', full, its || [])
+        if (r && r.ok) {
+          // แจ้งเบา ๆ ว่าเด้งไลน์แล้ว (ไม่ค้างจอ)
+        }
+      }
+    } catch (err) {
+      alert('เปลี่ยนสถานะไม่สำเร็จ: ' + err.message)
+      loadJobs()  // โหลดใหม่ถ้าพลาด
+    }
   }
 
   async function handleDelete(e, job) {
@@ -150,7 +172,11 @@ export default function JobList({ onOpen, onPrice }) {
                   </div>
                   <div className="r">
                     {j.total > 0 && <div className="amt">{fmt(j.total)} ฿</div>}
-                    <span className={'status s-' + j.status}>{j.status}</span>
+                    <select className={'status-sel s-' + j.status} value={j.status}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => quickStatus(e, j, e.target.value)}>
+                      {STATUS_ORDER.map(st => <option key={st} value={st}>{st}</option>)}
+                    </select>
                     <button className="card-del" onClick={(e) => handleDelete(e, j)} title="ลบงาน">🗑</button>
                   </div>
                 </div>
