@@ -3,7 +3,6 @@ import JobList from './JobList.jsx'
 import JobEdit from './JobEdit.jsx'
 import PODoc from './PODoc.jsx'
 import PriceSearch from './PriceSearch.jsx'
-import MonthSummary from './MonthSummary.jsx'
 
 export default function App() {
   const [view, setView] = useState({ page: 'list' })
@@ -17,11 +16,9 @@ export default function App() {
     return <PODoc {...poCtx} onClose={() => setView({ page: 'edit', jobId: poCtx.job.id })} />
 
   if (view.page === 'price') return <PriceSearch onBack={() => setView({ page: 'list', ts: Date.now() })} />
-  if (view.page === 'month') return <MonthSummary onBack={() => setView({ page: 'list', ts: Date.now() })} onOpen={(id)=>setView({page:'edit',jobId:id})} />
 
   return <JobList key={view.ts || 0}
     onOpen={(id) => setView({ page: 'edit', jobId: id })}
     onPrice={() => setView({ page: 'price' })}
-    onMonth={() => setView({ page: 'month' })}
   />
 }
