@@ -104,3 +104,11 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .card { position: relative; }
 .card-del { background: none; border: none; cursor: pointer; font-size: 15px; opacity: .35; padding: 4px 6px; border-radius: 7px; margin-top: 4px; transition: opacity .15s, background .15s; }
 .card-del:hover { opacity: 1; background: #f6ecec; }
+
+/* dropdown เปลี่ยนสถานะเร็วในการ์ด */
+.status-sel { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; font-family: inherit; margin-top: 3px; max-width: 130px; -webkit-appearance: none; appearance: none; text-align: center; }
+.status-sel:focus { outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
+.status-sel.s-ใหม่ { background: #eef3fb; color: #2c5b9e; }
+.status-sel.s-กำลังขอราคา { background: #fff4e0; color: #9e6b1e; }
+.status-sel.s-สั่งแล้ว { background: var(--accent-soft); color: #085041; }
+.status-sel.s-ยกเลิก { background: #f3f0f0; color: #7a6d6d; }
