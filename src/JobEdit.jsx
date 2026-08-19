@@ -20,15 +20,17 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
 
   useEffect(() => { init() }, [jobId])
 
-  // โหลดข้อมูลร้านเมื่อเลือกร้าน (จำจากครั้งก่อน)
+  // หาร้านหลักสำหรับ PO: ถ้าเทียบราคาใช้ร้านที่เลือก / ถ้าสั่งตรงใช้ร้านแรกในรายการ
+  const poShop = job?.chosen_shop || (items.find(it => !it.compare && String(it.shop||'').trim())?.shop || '').trim()
+
+  // โหลดข้อมูลร้านเมื่อร้านหลักเปลี่ยน (จำจากครั้งก่อน)
   useEffect(() => {
-    const shop = job?.chosen_shop
-    if (!shop) { setVendor({ short_name:'', full_name:'', branch:'', address:'', tax_id:'' }); return }
-    loadVendor(shop).then(v => {
+    if (!poShop) { setVendor({ short_name:'', full_name:'', branch:'', address:'', tax_id:'' }); return }
+    loadVendor(poShop).then(v => {
       if (v) setVendor({ short_name: v.short_name, full_name: v.full_name||'', branch: v.branch||'', address: v.address||'', tax_id: v.tax_id||'' })
-      else setVendor({ short_name: shop, full_name:'', branch:'', address:'', tax_id:'' })
+      else setVendor({ short_name: poShop, full_name:'', branch:'', address:'', tax_id:'' })
     })
-  }, [job?.chosen_shop])
+  }, [poShop])
 
   async function init() {
     setLoading(true); setErr('')
@@ -72,7 +74,7 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     try {
       const id = await saveJob(job, items)
       // จำข้อมูลร้านไว้ใช้ครั้งหน้า
-      if (job.chosen_shop && vendor.short_name) await saveVendor(vendor)
+      if (poShop && vendor.short_name) await saveVendor(vendor)
       const statusChanged = job.status !== origStatus
       const shouldNotify = statusChanged && (job.status === 'สั่งแล้ว' || job.status === 'ยกเลิก')
       let notifyMsg = ''
@@ -313,13 +315,13 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
         </div>
       )}
 
-      {/* พาเนลใบสั่งซื้อ PO — โผล่เมื่อเลือกร้านแล้ว */}
-      {job.chosen_shop && (
+      {/* พาเนลใบสั่งซื้อ PO — โผล่เมื่อมีร้าน (เทียบราคา หรือ สั่งตรง) */}
+      {poShop && (
         <div className="card-box">
           <div className="box-title">ใบสั่งซื้อ (PO)</div>
           <div className="vendor-panel">
             <div className="vendor-head">
-              <b>{job.chosen_shop}</b>
+              <b>{poShop}</b>
               {job.id && <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🖨️ พิมพ์ PO</button>}
             </div>
             <div className="grid2">
