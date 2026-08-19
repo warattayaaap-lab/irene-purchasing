@@ -152,6 +152,7 @@ export default function JobList({ onOpen, onPrice }) {
           <div key={st}>
             <div className="grp-head" onClick={() => setCollapsed(c => ({ ...c, [st]: !c[st] }))}>
               <span className="caret">{isCollapsed ? '▸ กาง' : '▾ ยุบ'}</span>
+              <span className={'grp-dot s-' + st}></span>
               <b style={{fontSize:14}}>{st}</b>
               <span className="cnt">{arr.length} งาน</span>
             </div>
