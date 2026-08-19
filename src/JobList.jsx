@@ -18,14 +18,13 @@ function daysSince(d) {
   return Math.floor((Date.now() - dt.getTime()) / 86400000)
 }
 
-export default function JobList({ onOpen, onPrice, onMonth }) {
+export default function JobList({ onOpen, onPrice }) {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState('')
   const [collapsed, setCollapsed] = useState({ 'สั่งแล้ว': true, 'ยกเลิก': true })
-  const [byReq, setByReq] = useState('')
   const [backing, setBacking] = useState(false)
 
   useEffect(() => { loadJobs() }, [])
@@ -71,27 +70,22 @@ export default function JobList({ onOpen, onPrice, onMonth }) {
   async function quickStatus(e, job, newStatus) {
     e.stopPropagation()
     if (newStatus === job.status) return
-    // อัปเดตหน้าจอทันที (optimistic)
     setJobs(arr => arr.map(x => x.id === job.id ? { ...x, status: newStatus } : x))
     try {
       await supabase.from('jobs').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', job.id)
-      // ยิงไลน์ถ้าเปลี่ยนเป็นสั่งแล้ว/ยกเลิก
       if (newStatus === 'สั่งแล้ว' || newStatus === 'ยกเลิก') {
         const { data: full } = await supabase.from('jobs').select('*').eq('id', job.id).single()
         const { data: its } = await supabase.from('job_items').select('*').eq('job_id', job.id).order('sort_order')
-        const r = await notifyLine('order', full, its || [])
-        if (r && r.ok) {
-          // แจ้งเบา ๆ ว่าเด้งไลน์แล้ว (ไม่ค้างจอ)
-        }
+        await notifyLine('order', full, its || [])
       }
     } catch (err) {
       alert('เปลี่ยนสถานะไม่สำเร็จ: ' + err.message)
-      loadJobs()  // โหลดใหม่ถ้าพลาด
+      loadJobs()
     }
   }
 
   async function handleDelete(e, job) {
-    e.stopPropagation()  // กันเปิดงานตอนกดลบ
+    e.stopPropagation()
     if (!confirm('ลบงาน ' + job.job_no + (job.requester ? ' (' + job.requester + ')' : '') + ' ถาวร?\nเอาคืนไม่ได้')) return
     try {
       await deleteJob(job.id)
@@ -101,11 +95,9 @@ export default function JobList({ onOpen, onPrice, onMonth }) {
     }
   }
 
-  const requesters = [...new Set(jobs.map(j => (j.requester||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'th'))
   const kw = q.trim().toLowerCase()
   const filtered = jobs.filter(j => {
     if (filter && j.status !== filter) return false
-    if (byReq && (j.requester || '') !== byReq) return false
     if (!kw) return true
     return `${j.job_no} ${j.requester} ${j.project} ${j.purpose || ''} ${j.chosen_shop || ''}`.toLowerCase().indexOf(kw) !== -1
   })
@@ -117,31 +109,21 @@ export default function JobList({ onOpen, onPrice, onMonth }) {
     <div className="wrap">
       <div className="top">
         <h1>ระบบจัดซื้อ</h1>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="top-btns">
           <button className="btn ghost" onClick={onPrice}>🔍 ค้นราคา</button>
-          <button className="btn ghost" onClick={onMonth}>📊 สรุปรายเดือน</button>
-          <button className="btn ghost" onClick={handleBackup} disabled={backing}>{backing?'กำลังสำรอง…':'💾 สำรองข้อมูล'}</button>
+          <button className="btn ghost" onClick={handleBackup} disabled={backing}>{backing?'กำลังสำรอง…':'💾 สำรอง'}</button>
           <button className="btn" onClick={() => onOpen('new')}>+ งานใหม่</button>
         </div>
       </div>
-      <div className="toolbar">
-        <input placeholder="ค้นหา ผู้ขอ / ของ / โปรเจกต์…" value={q} onChange={e => setQ(e.target.value)} />
-      </div>
-      <div className="toolbar">
+
+      <input className="search" placeholder="ค้นหา ผู้ขอ / ของ / โปรเจกต์…" value={q} onChange={e => setQ(e.target.value)} />
+
+      <div className="chips">
         <span className={'chip' + (filter === '' ? ' on' : '')} onClick={() => setFilter('')}>ทั้งหมด</span>
         {STATUS_ORDER.map(s => (
           <span key={s} className={'chip' + (filter === s ? ' on' : '')} onClick={() => setFilter(s)}>{s}</span>
         ))}
       </div>
-      {requesters.length > 0 && (
-        <div className="toolbar">
-          <span className="cnt" style={{alignSelf:'center'}}>ผู้ขอ:</span>
-          <span className={'chip' + (byReq === '' ? ' on' : '')} onClick={() => setByReq('')}>ทุกคน</span>
-          {requesters.map(r => (
-            <span key={r} className={'chip' + (byReq === r ? ' on' : '')} onClick={() => setByReq(byReq === r ? '' : r)}>{r}</span>
-          ))}
-        </div>
-      )}
 
       {loading && <p className="loading">กำลังโหลดงาน…</p>}
       {error && <p className="empty" style={{ color: 'var(--danger)' }}>โหลดไม่สำเร็จ: {error}</p>}
@@ -153,7 +135,7 @@ export default function JobList({ onOpen, onPrice, onMonth }) {
         return (
           <div key={st}>
             <div className="grp-head" onClick={() => setCollapsed(c => ({ ...c, [st]: !c[st] }))}>
-              <span className="caret">{isCollapsed ? '▸' : '▾'}</span>
+              <span className="caret">{isCollapsed ? '▸ กาง' : '▾ ยุบ'}</span>
               <span className={'status s-' + st}>{st}</span>
               <span className="cnt">{arr.length} งาน</span>
             </div>
@@ -167,7 +149,7 @@ export default function JobList({ onOpen, onPrice, onMonth }) {
                     {stale && <span className="stale"> ⚠ ค้าง {daysSince(j.job_date)} วัน</span>}
                     {j.project && ' · ' + j.project}
                     {j.purpose && ' — ' + j.purpose}
-                    <small>{j.job_no} · {fmtDate(j.job_date)} · {itemCount} รายการ
+                    <small>{j.job_no} · สั่ง {fmtDate(j.job_date)} · {itemCount} รายการ
                       {j.eta && ' · ของถึง ' + fmtDate(j.eta)}
                       {j.chosen_shop && ' · ' + j.chosen_shop}</small>
                   </div>
@@ -186,8 +168,9 @@ export default function JobList({ onOpen, onPrice, onMonth }) {
           </div>
         )
       })}
+
       {!loading && !error && (
-        <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, marginTop: 20 }}>
+        <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, marginTop: 16 }}>
           ทั้งหมด {jobs.length} งาน
         </p>
       )}
