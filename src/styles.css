@@ -138,3 +138,10 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .r-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; justify-content: flex-end; }
 .card-del { background: #fbeeee; border: 1px solid #e6d0d0; color: var(--danger); cursor: pointer; font-size: 12.5px; padding: 5px 10px; border-radius: 8px; opacity: 1; white-space: nowrap; font-family: inherit; }
 .card-del:hover { background: #f5dede; }
+
+/* จุดสีนำหน้าชื่อสถานะในหัวกลุ่ม */
+.grp-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.grp-dot.s-ใหม่ { background: #2c5b9e; }
+.grp-dot.s-กำลังขอราคา { background: #9e6b1e; }
+.grp-dot.s-สั่งแล้ว { background: var(--accent); }
+.grp-dot.s-ยกเลิก { background: #a89a9a; }
