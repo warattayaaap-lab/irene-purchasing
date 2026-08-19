@@ -112,3 +112,8 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .status-sel.s-กำลังขอราคา { background: #fff4e0; color: #9e6b1e; }
 .status-sel.s-สั่งแล้ว { background: var(--accent-soft); color: #085041; }
 .status-sel.s-ยกเลิก { background: #f3f0f0; color: #7a6d6d; }
+
+/* แถวงานค้างในหน้าสรุปรายเดือน */
+.stale-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid #f0e4e4; cursor: pointer; font-size: 14px; }
+.stale-row:first-of-type { border-top: none; }
+.stale-row:hover { opacity: .8; }
