@@ -26,6 +26,7 @@ export default function JobList({ onOpen, onPrice }) {
   const [filter, setFilter] = useState('')
   const [collapsed, setCollapsed] = useState({ 'สั่งแล้ว': true, 'ยกเลิก': true })
   const [backing, setBacking] = useState(false)
+  const [dateFilter, setDateFilter] = useState('')  // YYYY-MM-DD
 
   useEffect(() => { loadJobs() }, [])
 
@@ -37,6 +38,13 @@ export default function JobList({ onOpen, onPrice }) {
       .order('job_no', { ascending: false })
     if (error) { setError(error.message); setLoading(false); return }
     setJobs(data || []); setLoading(false)
+  }
+
+  function toggleAll() {
+    const anyOpen = STATUS_ORDER.some(st => !collapsed[st])
+    const next = {}
+    STATUS_ORDER.forEach(st => { next[st] = anyOpen })  // ถ้ามีเปิดอยู่ = ยุบหมด, ถ้ายุบหมด = กางหมด
+    setCollapsed(next)
   }
 
   async function handleBackup() {
@@ -98,6 +106,7 @@ export default function JobList({ onOpen, onPrice }) {
   const kw = q.trim().toLowerCase()
   const filtered = jobs.filter(j => {
     if (filter && j.status !== filter) return false
+    if (dateFilter && (j.job_date || '').slice(0,10) !== dateFilter) return false
     if (!kw) return true
     return `${j.job_no} ${j.requester} ${j.project} ${j.purpose || ''} ${j.chosen_shop || ''}`.toLowerCase().indexOf(kw) !== -1
   })
@@ -118,11 +127,18 @@ export default function JobList({ onOpen, onPrice }) {
 
       <input className="search" placeholder="ค้นหา ผู้ขอ / ของ / โปรเจกต์…" value={q} onChange={e => setQ(e.target.value)} />
 
-      <div className="chips">
-        <span className={'chip' + (filter === '' ? ' on' : '')} onClick={() => setFilter('')}>ทั้งหมด</span>
-        {STATUS_ORDER.map(s => (
-          <span key={s} className={'chip' + (filter === s ? ' on' : '')} onClick={() => setFilter(s)}>{s}</span>
-        ))}
+      <div className="chips-row">
+        <div className="chips">
+          <span className={'chip' + (filter === '' ? ' on' : '')} onClick={() => setFilter('')}>ทั้งหมด</span>
+          {STATUS_ORDER.map(s => (
+            <span key={s} className={'chip' + (filter === s ? ' on' : '')} onClick={() => setFilter(s)}>{s}</span>
+          ))}
+        </div>
+        <div className="list-tools">
+          <button className="mini-btn" onClick={toggleAll}>ยุบ/กางทั้งหมด</button>
+          <input type="date" className="date-filter" value={dateFilter} onChange={e=>setDateFilter(e.target.value)} title="กรองวันที่สั่ง" />
+          {dateFilter && <button className="mini-btn" onClick={()=>setDateFilter('')}>ล้างวันที่</button>}
+        </div>
       </div>
 
       {loading && <p className="loading">กำลังโหลดงาน…</p>}
@@ -136,7 +152,7 @@ export default function JobList({ onOpen, onPrice }) {
           <div key={st}>
             <div className="grp-head" onClick={() => setCollapsed(c => ({ ...c, [st]: !c[st] }))}>
               <span className="caret">{isCollapsed ? '▸ กาง' : '▾ ยุบ'}</span>
-              <span className={'status s-' + st}>{st}</span>
+              <b style={{fontSize:14}}>{st}</b>
               <span className="cnt">{arr.length} งาน</span>
             </div>
             {!isCollapsed && arr.map(j => {
@@ -155,12 +171,14 @@ export default function JobList({ onOpen, onPrice }) {
                   </div>
                   <div className="r">
                     {j.total > 0 && <div className="amt">{fmt(j.total)} ฿</div>}
-                    <select className={'status-sel s-' + j.status} value={j.status}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => quickStatus(e, j, e.target.value)}>
-                      {STATUS_ORDER.map(st => <option key={st} value={st}>{st}</option>)}
-                    </select>
-                    <button className="card-del" onClick={(e) => handleDelete(e, j)} title="ลบงาน">🗑</button>
+                    <div className="r-actions">
+                      <select className={'status-sel s-' + j.status} value={j.status}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => quickStatus(e, j, e.target.value)}>
+                        {STATUS_ORDER.map(st => <option key={st} value={st}>{st}</option>)}
+                      </select>
+                      <button className="card-del" onClick={(e) => handleDelete(e, j)} title="ลบงาน">🗑 ลบ</button>
+                    </div>
                   </div>
                 </div>
               )
