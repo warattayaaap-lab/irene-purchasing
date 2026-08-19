@@ -7,12 +7,13 @@ export default function PODoc({ job, items, onClose }) {
   const [vendor, setVendor] = useState(null)
   useEffect(() => {
     loadSettings().then(setCfg)
-    if (job.chosen_shop) loadVendor(job.chosen_shop).then(v => setVendor(v || {}))
+    const poShop = job.chosen_shop || (items.find(i=>!i.compare && String(i.shop||'').trim())?.shop || '').trim()
+    if (poShop) loadVendor(poShop).then(v => setVendor(v || {}))
     else setVendor({})
   }, [])
   if (!cfg || vendor === null) return <div className="wrap"><p className="loading">กำลังเตรียมเอกสาร…</p></div>
 
-  const chosen = job.chosen_shop
+  const chosen = job.chosen_shop || (items.find(i=>!i.compare && String(i.shop||'').trim())?.shop || '').trim()
 
   const rows = items.filter(it => String(it.name||'').trim()).map(it => {
     let price = ''
