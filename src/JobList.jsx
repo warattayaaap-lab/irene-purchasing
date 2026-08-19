@@ -18,7 +18,7 @@ function daysSince(d) {
   return Math.floor((Date.now() - dt.getTime()) / 86400000)
 }
 
-export default function JobList({ onOpen, onPrice }) {
+export default function JobList({ onOpen, onPrice, onMonth }) {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -119,6 +119,7 @@ export default function JobList({ onOpen, onPrice }) {
         <h1>ระบบจัดซื้อ</h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn ghost" onClick={onPrice}>🔍 ค้นราคา</button>
+          <button className="btn ghost" onClick={onMonth}>📊 สรุปรายเดือน</button>
           <button className="btn ghost" onClick={handleBackup} disabled={backing}>{backing?'กำลังสำรอง…':'💾 สำรองข้อมูล'}</button>
           <button className="btn" onClick={() => onOpen('new')}>+ งานใหม่</button>
         </div>
