@@ -126,3 +126,15 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .grp-head { display: flex; align-items: center; gap: 8px; padding: 8px 4px 4px; cursor: pointer; }
 .card { padding: 11px 14px; margin-bottom: 6px; }
 .card .l small { margin-top: 3px; }
+
+/* แถวชิป + เครื่องมือ (ยุบกาง/กรองวันที่) */
+.chips-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.list-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mini-btn { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12.5px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.mini-btn:hover { border-color: var(--accent); color: var(--accent); }
+.date-filter { width: auto; padding: 5px 9px; font-size: 12.5px; border-radius: 8px; }
+
+/* จัดปุ่มในการ์ดฝั่งขวาให้ถังขยะเด่นขึ้น ไม่ชิดขอบ */
+.r-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; justify-content: flex-end; }
+.card-del { background: #fbeeee; border: 1px solid #e6d0d0; color: var(--danger); cursor: pointer; font-size: 12.5px; padding: 5px 10px; border-radius: 8px; opacity: 1; white-space: nowrap; font-family: inherit; }
+.card-del:hover { background: #f5dede; }
