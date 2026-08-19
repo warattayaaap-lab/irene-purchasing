@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
 import { deleteJob } from './lib.js'
+import * as XLSX from 'xlsx'
 
 const STATUS_ORDER = ['ใหม่', 'กำลังขอราคา', 'สั่งแล้ว', 'ยกเลิก']
 const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })
@@ -25,6 +26,7 @@ export default function JobList({ onOpen, onPrice }) {
   const [filter, setFilter] = useState('')
   const [collapsed, setCollapsed] = useState({ 'สั่งแล้ว': true, 'ยกเลิก': true })
   const [byReq, setByReq] = useState('')
+  const [backing, setBacking] = useState(false)
 
   useEffect(() => { loadJobs() }, [])
 
@@ -36,6 +38,34 @@ export default function JobList({ onOpen, onPrice }) {
       .order('job_no', { ascending: false })
     if (error) { setError(error.message); setLoading(false); return }
     setJobs(data || []); setLoading(false)
+  }
+
+  async function handleBackup() {
+    setBacking(true)
+    try {
+      const [jobsR, itemsR, histR, vendR] = await Promise.all([
+        supabase.from('jobs').select('*').order('job_no'),
+        supabase.from('job_items').select('*'),
+        supabase.from('price_history').select('*'),
+        supabase.from('vendors').select('*'),
+      ])
+      const wb = XLSX.utils.book_new()
+      const clean = (rows) => (rows||[]).map(r => {
+        const o = {}
+        for (const k in r) o[k] = (typeof r[k]==='object' && r[k]!==null) ? JSON.stringify(r[k]) : r[k]
+        return o
+      })
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clean(jobsR.data)), 'งาน')
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clean(itemsR.data)), 'รายการของ')
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clean(histR.data)), 'ประวัติราคา')
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clean(vendR.data)), 'ผู้ขาย')
+      const d = new Date()
+      const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0')
+      XLSX.writeFile(wb, 'backup-irene-' + stamp + '.xlsx')
+    } catch (e) {
+      alert('สำรองไม่สำเร็จ: ' + e.message)
+    }
+    setBacking(false)
   }
 
   async function handleDelete(e, job) {
@@ -67,6 +97,7 @@ export default function JobList({ onOpen, onPrice }) {
         <h1>ระบบจัดซื้อ</h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn ghost" onClick={onPrice}>🔍 ค้นราคา</button>
+          <button className="btn ghost" onClick={handleBackup} disabled={backing}>{backing?'กำลังสำรอง…':'💾 สำรองข้อมูล'}</button>
           <button className="btn" onClick={() => onOpen('new')}>+ งานใหม่</button>
         </div>
       </div>
