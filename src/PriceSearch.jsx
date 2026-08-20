@@ -22,9 +22,8 @@ function priceKey(name) {
 }
 const CAT_ORDER = ['งานโครงสร้าง','งานประปา','งานไฟฟ้า','งานสี','อื่น ๆ']
 
-export default function PriceSearch({ onBack, onOpenItem }) {
+export default function PriceSearch({ onBack, onOpenItem, q, setQ }) {
   const [raw, setRaw] = useState(null)
-  const [q, setQ] = useState('')
   const [openCat, setOpenCat] = useState({})
   const [openItem, setOpenItem] = useState({})
   const [err, setErr] = useState('')
