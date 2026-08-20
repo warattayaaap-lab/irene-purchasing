@@ -22,7 +22,7 @@ function priceKey(name) {
 }
 const CAT_ORDER = ['งานโครงสร้าง','งานประปา','งานไฟฟ้า','งานสี','อื่น ๆ']
 
-export default function PriceSearch({ onBack }) {
+export default function PriceSearch({ onBack, onOpenItem }) {
   const [raw, setRaw] = useState(null)
   const [q, setQ] = useState('')
   const [openCat, setOpenCat] = useState({})
@@ -94,26 +94,14 @@ export default function PriceSearch({ onBack }) {
                   <thead><tr><th style={{textAlign:'left'}}>รายการ</th><th>ร้านล่าสุด</th><th>วันที่</th><th style={{textAlign:'right'}}>ราคาล่าสุด</th><th></th></tr></thead>
                   <tbody>
                     {items.map((it,ii) => {
-                      const io = forceOpen || openItem[cat+'|'+it.name]
                       const L = it.latest
                       return (
-                        <React.Fragment key={it.name}>
-                          <tr className="prow" onClick={()=>setOpenItem(o=>({...o,[cat+'|'+it.name]:!o[cat+'|'+it.name]}))}>
-                            <td style={{textAlign:'left'}}><b>{it.name}</b>{it.aliases.length>0 && <span className="cnt"> (รวม {it.aliases.length+1})</span>}</td>
-                            <td>{L.shop}</td><td>{fmtDate(L.date)}</td>
-                            <td style={{textAlign:'right',color:'var(--accent)',fontWeight:600}}>{fmt(L.price)} ฿</td>
-                            <td style={{textAlign:'right',color:'var(--muted)'}}>{it.records.length>1?(io?'▴':'▾'):''}</td>
-                          </tr>
-                          {io && it.records.length>1 && (
-                            <tr><td colSpan={5} style={{padding:0,background:'#f7faf9'}}>
-                              <table className="ptable" style={{margin:0}}><tbody>
-                                {it.records.slice(0,15).map((r,ri)=>(
-                                  <tr key={ri}><td style={{textAlign:'left',color:'var(--muted)'}}>{r.shop}</td><td style={{color:'var(--muted)'}}>{fmtDate(r.date)}</td><td style={{textAlign:'right',color:'var(--muted)'}}>{fmt(r.price)} ฿</td></tr>
-                                ))}
-                              </tbody></table>
-                            </td></tr>
-                          )}
-                        </React.Fragment>
+                        <tr key={it.name} className="prow" onClick={()=>onOpenItem(it.name, it.aliases)}>
+                          <td style={{textAlign:'left'}}><b>{it.name}</b>{it.aliases.length>0 && <span className="cnt"> (รวม {it.aliases.length+1})</span>}</td>
+                          <td>{L.shop}</td><td>{fmtDate(L.date)}</td>
+                          <td style={{textAlign:'right',color:'var(--accent)',fontWeight:600}}>{fmt(L.price)} ฿</td>
+                          <td style={{textAlign:'right',color:'var(--accent)'}}>›</td>
+                        </tr>
                       )
                     })}
                   </tbody>
