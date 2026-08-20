@@ -10,6 +10,7 @@ export default function App() {
   const [view, setView] = useState({ page: 'list' })
   const [poCtx, setPoCtx] = useState(null)
   const [itemCtx, setItemCtx] = useState(null)
+  const [priceQ, setPriceQ] = useState('')
 
   if (view.page === 'edit')
     return <JobEdit jobId={view.jobId} onBack={() => setView({ page: 'list', ts: Date.now() })}
@@ -18,7 +19,8 @@ export default function App() {
   if (view.page === 'po' && poCtx)
     return <PODoc {...poCtx} onClose={() => setView({ page: 'edit', jobId: poCtx.job.id })} />
 
-  if (view.page === 'price') return <PriceSearch onBack={() => setView({ page: 'list', ts: Date.now() })}
+  if (view.page === 'price') return <PriceSearch q={priceQ} setQ={setPriceQ}
+    onBack={() => setView({ page: 'list', ts: Date.now() })}
     onOpenItem={(name, aliases) => { setItemCtx({ name, aliases }); setView({ page: 'item' }) }} />
 
   if (view.page === 'item' && itemCtx) return <ItemDetail itemName={itemCtx.name} aliases={itemCtx.aliases}
