@@ -145,3 +145,10 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .grp-dot.s-กำลังขอราคา { background: #9e6b1e; }
 .grp-dot.s-สั่งแล้ว { background: var(--accent); }
 .grp-dot.s-ยกเลิก { background: #a89a9a; }
+
+/* การ์ดสรุปในหน้ารายละเอียดของ */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+@media (max-width: 560px) { .stat-grid { grid-template-columns: 1fr; } }
+.stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; }
+.stat-label { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+.stat-val { font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
