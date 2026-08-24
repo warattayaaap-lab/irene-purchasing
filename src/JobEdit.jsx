@@ -13,24 +13,36 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [err, setErr] = useState('')
   const [newShop, setNewShop] = useState('')
   const [origStatus, setOrigStatus] = useState('')
-  const [vendor, setVendor] = useState({ short_name:'', full_name:'', branch:'', address:'', tax_id:'' })
+  const [vendors, setVendors] = useState({})  // { ชื่อร้าน: {full_name, branch, address, tax_id} }
   const [oneShop, setOneShop] = useState('')
   const [pasteBox, setPasteBox] = useState(false)
   const [pasteText, setPasteText] = useState('')
 
   useEffect(() => { init() }, [jobId])
 
-  // หาร้านหลักสำหรับ PO: ถ้าเทียบราคาใช้ร้านที่เลือก / ถ้าสั่งตรงใช้ร้านแรกในรายการ
-  const poShop = job?.chosen_shop || (items.find(it => !it.compare && String(it.shop||'').trim())?.shop || '').trim()
+  // หาทุกร้านที่จะออก PO: ร้านที่เลือก (เทียบราคา) + ร้านสั่งตรงทุกร้านในรายการ
+  const poShops = [...new Set([
+    ...(job?.chosen_shop ? [job.chosen_shop] : []),
+    ...items.filter(it => !it.compare && String(it.shop||'').trim()).map(it => it.shop.trim())
+  ])]
+  const poShopsKey = poShops.join('|')
 
-  // โหลดข้อมูลร้านเมื่อร้านหลักเปลี่ยน (จำจากครั้งก่อน)
+  // โหลดข้อมูลทุกร้าน (จำจากครั้งก่อน) เมื่อรายชื่อร้านเปลี่ยน
   useEffect(() => {
-    if (!poShop) { setVendor({ short_name:'', full_name:'', branch:'', address:'', tax_id:'' }); return }
-    loadVendor(poShop).then(v => {
-      if (v) setVendor({ short_name: v.short_name, full_name: v.full_name||'', branch: v.branch||'', address: v.address||'', tax_id: v.tax_id||'' })
-      else setVendor({ short_name: poShop, full_name:'', branch:'', address:'', tax_id:'' })
-    })
-  }, [poShop])
+    if (!poShops.length) { setVendors({}); return }
+    Promise.all(poShops.map(sh => loadVendor(sh).then(v => [sh, v
+      ? { short_name: v.short_name, full_name: v.full_name||'', branch: v.branch||'', address: v.address||'', tax_id: v.tax_id||'' }
+      : { short_name: sh, full_name:'', branch:'', address:'', tax_id:'' }])))
+      .then(pairs => {
+        setVendors(prev => {
+          const next = { ...prev }
+          pairs.forEach(([sh, vd]) => { if (!next[sh]) next[sh] = vd })  // ไม่ทับที่ผู้ใช้กำลังพิมพ์
+          return next
+        })
+      })
+  }, [poShopsKey])
+
+  const setVendorField = (shop, field, val) => setVendors(prev => ({ ...prev, [shop]: { ...(prev[shop]||{short_name:shop}), [field]: val } }))
 
   async function init() {
     setLoading(true); setErr('')
@@ -73,8 +85,11 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     setSaving(true); setErr('')
     try {
       const id = await saveJob(job, items)
-      // จำข้อมูลร้านไว้ใช้ครั้งหน้า
-      if (poShop && vendor.short_name) await saveVendor(vendor)
+      // จำข้อมูลทุกร้านไว้ใช้ครั้งหน้า
+      for (const sh of poShops) {
+        const vd = vendors[sh]
+        if (vd && (vd.full_name || vd.address || vd.tax_id)) await saveVendor({ ...vd, short_name: sh })
+      }
       const statusChanged = job.status !== origStatus
       const shouldNotify = statusChanged && (job.status === 'สั่งแล้ว' || job.status === 'ยกเลิก')
       let notifyMsg = ''
@@ -148,6 +163,13 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   if (loading) return <div className="wrap"><p className="loading">กำลังโหลด…</p></div>
   if (!job) return <div className="wrap"><p className="empty" style={{color:'var(--danger)'}}>{err}</p><button className="btn ghost" onClick={()=>onBack()}>← กลับ</button></div>
 
+  const imgSrc = (im) => {
+    if (!im) return ''
+    if (im.url) return im.url
+    if (im.thumb) return im.thumb
+    if (im.base64) return im.base64.startsWith('data:') ? im.base64 : `data:${im.type||'image/jpeg'};base64,${im.base64}`
+    return ''
+  }
   const total = calcTotal(items, job.chosen_shop)
   const compareItems = items.filter(it => it.compare && String(it.name||'').trim())
 
@@ -227,8 +249,8 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
             {job.images.map((im,i)=>(
               <div key={i} style={{position:'relative'}}>
-                <a href={im.url||im.thumb} target="_blank" rel="noreferrer">
-                  <img src={im.thumb||im.url} alt={'รูป '+(i+1)} style={{width:96,height:96,objectFit:'cover',borderRadius:10,border:'1px solid var(--line)'}} />
+                <a href={imgSrc(im)} target="_blank" rel="noreferrer">
+                  <img src={imgSrc(im)} alt={'รูป '+(i+1)} style={{width:96,height:96,objectFit:'cover',borderRadius:10,border:'1px solid var(--line)'}} />
                 </a>
                 <b onClick={()=>delImage(i)} style={{position:'absolute',top:-8,right:-8,background:'#fff',border:'1px solid var(--line)',borderRadius:'50%',width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14}}>×</b>
               </div>
@@ -315,23 +337,30 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
         </div>
       )}
 
-      {/* พาเนลใบสั่งซื้อ PO — โผล่เมื่อมีร้าน (เทียบราคา หรือ สั่งตรง) */}
-      {poShop && (
+      {/* พาเนลใบสั่งซื้อ PO — โผล่เมื่อมีร้าน (แยกกล่องต่อร้าน กรณีหลายร้าน) */}
+      {poShops.length > 0 && (
         <div className="card-box">
-          <div className="box-title">ใบสั่งซื้อ (PO)</div>
-          <div className="vendor-panel">
-            <div className="vendor-head">
-              <b>{poShop}</b>
-              {job.id && <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🖨️ พิมพ์ PO</button>}
-            </div>
-            <div className="grid2">
-              <Field label="ชื่อเต็มบริษัทผู้ขาย"><input value={vendor.full_name} onChange={e=>setVendor(v=>({...v,full_name:e.target.value}))} placeholder="เช่น บริษัท วีระพานิช เชียงใหม่ จำกัด" /></Field>
-              <Field label="สาขา"><input value={vendor.branch} onChange={e=>setVendor(v=>({...v,branch:e.target.value}))} placeholder="สำนักงานใหญ่" /></Field>
-              <Field label="ที่อยู่"><input value={vendor.address} onChange={e=>setVendor(v=>({...v,address:e.target.value}))} placeholder="เลขที่ หมู่ ตำบล อำเภอ จังหวัด รหัสไปรษณีย์" /></Field>
-              <Field label="เลขผู้เสียภาษี"><input value={vendor.tax_id} onChange={e=>setVendor(v=>({...v,tax_id:e.target.value}))} placeholder="0505XXXXXXXXX" /></Field>
-            </div>
-            <p className="hint" style={{marginTop:8}}>กรอกครั้งแรกครั้งเดียว — ระบบจดจำร้านนี้ไว้ ใช้งานครั้งหน้าขึ้นเองอัตโนมัติ</p>
+          <div className="box-title">ใบสั่งซื้อ (PO)
+            {poShops.length > 1 && <span className="hint"> — งานนี้สั่ง {poShops.length} ร้าน ออก PO แยกใบ</span>}
           </div>
+          {poShops.map(sh => {
+            const vd = vendors[sh] || { full_name:'', branch:'', address:'', tax_id:'' }
+            return (
+              <div className="vendor-panel" key={sh} style={{marginBottom:10}}>
+                <div className="vendor-head">
+                  <b>{sh}</b>
+                </div>
+                <div className="grid2">
+                  <Field label="ชื่อเต็มบริษัทผู้ขาย"><input value={vd.full_name||''} onChange={e=>setVendorField(sh,'full_name',e.target.value)} placeholder="เช่น บริษัท วีระพานิช เชียงใหม่ จำกัด" /></Field>
+                  <Field label="สาขา"><input value={vd.branch||''} onChange={e=>setVendorField(sh,'branch',e.target.value)} placeholder="สำนักงานใหญ่" /></Field>
+                  <Field label="ที่อยู่"><input value={vd.address||''} onChange={e=>setVendorField(sh,'address',e.target.value)} placeholder="เลขที่ หมู่ ตำบล อำเภอ จังหวัด รหัสไปรษณีย์" /></Field>
+                  <Field label="เลขผู้เสียภาษี"><input value={vd.tax_id||''} onChange={e=>setVendorField(sh,'tax_id',e.target.value)} placeholder="0505XXXXXXXXX" /></Field>
+                </div>
+              </div>
+            )
+          })}
+          <p className="hint" style={{marginTop:4,marginBottom:10}}>กรอกครั้งแรกครั้งเดียว — ระบบจดจำแต่ละร้านไว้ ใช้งานครั้งหน้าขึ้นเองอัตโนมัติ</p>
+          {job.id && <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🖨️ พิมพ์ PO{poShops.length>1?' (เลือกร้าน)':''}</button>}
         </div>
       )}
 
