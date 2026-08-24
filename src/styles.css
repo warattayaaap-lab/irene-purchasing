@@ -152,3 +152,6 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; }
 .stat-label { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
 .stat-val { font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+
+/* แถวเลือกพิมพ์ PO ตามร้าน (หน้า PODoc หลายร้าน) */
+.po-shop-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; flex-wrap: wrap; }
