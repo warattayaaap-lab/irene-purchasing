@@ -52,7 +52,7 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     setLoading(true); setErr('')
     if (jobId === 'new') {
       const no = await nextJobNo()
-      setJob({ job_no: no, job_date: new Date().toISOString().slice(0,10), requester:'', project:'', purpose:'', note:'', status:'ใหม่', po_no:'', chosen_shop:'', eta:'', eta_time:'', delivery:'', order_by:'', need_by:'', images:[], shop_eta:{}, no_po_shops:[] })
+      setJob({ job_no: no, job_date: new Date().toISOString().slice(0,10), requester:'', project:'', purpose:'', note:'', status:'ใหม่', po_no:'', chosen_shop:'', eta:'', eta_time:'', delivery:'', order_by:'', need_by:'', images:[], shop_eta:{}, no_po_shops:[], shop_delivery:{} })
       setItems([blankItem()]); setShops([]); setOrigStatus('ใหม่'); setLoading(false); return
     }
     const { data: j, error: e1 } = await supabase.from('jobs').select('*').eq('id', jobId).single()
@@ -356,8 +356,12 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
                     <input type="checkbox" checked={isNoPo(sh)} onChange={()=>toggleNoPo(sh)} />
                     ไม่เปิด PO ร้านนี้
                   </label>
+                  <select className="shop-deliv" value={(job.shop_delivery||{})[sh]||'ส่ง'} onChange={e=>set('shop_delivery',{...(job.shop_delivery||{}),[sh]:e.target.value})}>
+                    <option value="ส่ง">🚚 ร้านจัดส่ง</option>
+                    <option value="รับเอง">🏃 ไปรับเอง</option>
+                  </select>
                   <div className="shop-eta">
-                    <label>📦 วันส่งของร้านนี้</label>
+                    <label>📦 {((job.shop_delivery||{})[sh]==='รับเอง')?'วันเข้ารับ':'วันส่งของ'}ร้านนี้</label>
                     <input type="date" value={(job.shop_eta||{})[sh]||''} onChange={e=>set('shop_eta',{...(job.shop_eta||{}),[sh]:e.target.value})} />
                   </div>
                 </div>
