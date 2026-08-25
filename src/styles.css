@@ -168,3 +168,6 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 
 /* ช่องวันส่งท้ายแถวรายการ */
 .i-ship { width: 132px; padding: 8px 8px; font-size: 12.5px; }
+
+/* ตัวเลือกส่ง/รับเอง ต่อร้าน */
+.shop-deliv { padding: 6px 10px; font-size: 12.5px; border-radius: 8px; border: 1px solid var(--line); font-family: inherit; cursor: pointer; }
