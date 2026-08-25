@@ -349,6 +349,10 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
               <div className="vendor-panel" key={sh} style={{marginBottom:10}}>
                 <div className="vendor-head">
                   <b>{sh}</b>
+                  <div className="shop-eta">
+                    <label>📦 วันส่งของร้านนี้</label>
+                    <input type="date" value={(job.shop_eta||{})[sh]||''} onChange={e=>set('shop_eta',{...(job.shop_eta||{}),[sh]:e.target.value})} />
+                  </div>
                 </div>
                 <div className="grid2">
                   <Field label="ชื่อเต็มบริษัทผู้ขาย"><input value={vd.full_name||''} onChange={e=>setVendorField(sh,'full_name',e.target.value)} placeholder="เช่น บริษัท วีระพานิช เชียงใหม่ จำกัด" /></Field>
