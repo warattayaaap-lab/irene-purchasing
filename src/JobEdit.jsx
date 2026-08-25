@@ -193,8 +193,6 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
           <Field label="โปรเจกต์ / บ้าน"><input value={job.project} onChange={e=>set('project',e.target.value)} placeholder="เช่น บ้านเจมส์" /></Field>
           <Field label="สถานะ"><select value={job.status} onChange={e=>set('status',e.target.value)}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></Field>
           <Field label="เลข PO / บิล (ถ้ามี)"><input value={job.po_no} onChange={e=>set('po_no',e.target.value)} placeholder="จาก PEAK หรือเลขบิล" /></Field>
-          <Field label="ของถึงประมาณ"><input type="date" value={job.eta||''} onChange={e=>set('eta',e.target.value)} /></Field>
-          <Field label="ช่วงเวลา"><select value={job.eta_time} onChange={e=>set('eta_time',e.target.value)}><option value="">ไม่ระบุ</option>{ETA_TIMES.filter(Boolean).map(t=><option key={t}>{t}</option>)}</select></Field>
           <Field label="การรับของ"><select value={job.delivery} onChange={e=>set('delivery',e.target.value)}><option value="">ร้านจัดส่ง</option><option>ไปรับเอง</option></select></Field>
           <Field label="ต้องการใช้ (หน้างานระบุ)"><input type="date" value={job.need_by||''} onChange={e=>set('need_by',e.target.value)} /></Field>
           <Field label="ใครเป็นคนสั่ง"><select value={job.order_by} onChange={e=>set('order_by',e.target.value)}><option value="">จัดซื้อสั่ง</option><option>หน้างานสั่งเอง</option></select></Field>
