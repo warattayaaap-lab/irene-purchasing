@@ -174,3 +174,23 @@ export async function saveVendor(v) {
   if (existing) await supabase.from('vendors').update(payload).eq('id', existing.id)
   else await supabase.from('vendors').insert(payload)
 }
+
+// โหลดรายชื่อผู้ที่เคยส่งฟอร์ม (มี requester_id) สำหรับเลือก tag ในไลน์
+export async function loadRequesters() {
+  const { data } = await supabase
+    .from('jobs')
+    .select('requester, requester_id')
+    .not('requester_id', 'is', null)
+    .neq('requester_id', '')
+  if (!data) return []
+  // รวมชื่อซ้ำ เก็บ id ล่าสุดของแต่ละคน (key = requester_id)
+  const map = {}
+  data.forEach(r => {
+    const id = (r.requester_id || '').trim()
+    const name = (r.requester || '').trim()
+    if (!id) return
+    map[id] = name || map[id] || '(ไม่มีชื่อ)'
+  })
+  return Object.entries(map).map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'th'))
+}
