@@ -43,12 +43,16 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   }, [poShopsKey])
 
   const setVendorField = (shop, field, val) => setVendors(prev => ({ ...prev, [shop]: { ...(prev[shop]||{short_name:shop}), [field]: val } }))
+  const noPoShops = job?.no_po_shops || []
+  const isNoPo = (sh) => noPoShops.includes(sh)
+  const toggleNoPo = (sh) => set('no_po_shops', isNoPo(sh) ? noPoShops.filter(x=>x!==sh) : [...noPoShops, sh])
+  const poShopsActive = poShops.filter(sh => !isNoPo(sh))
 
   async function init() {
     setLoading(true); setErr('')
     if (jobId === 'new') {
       const no = await nextJobNo()
-      setJob({ job_no: no, job_date: new Date().toISOString().slice(0,10), requester:'', project:'', purpose:'', note:'', status:'ใหม่', po_no:'', chosen_shop:'', eta:'', eta_time:'', delivery:'', order_by:'', need_by:'', images:[], shop_eta:{} })
+      setJob({ job_no: no, job_date: new Date().toISOString().slice(0,10), requester:'', project:'', purpose:'', note:'', status:'ใหม่', po_no:'', chosen_shop:'', eta:'', eta_time:'', delivery:'', order_by:'', need_by:'', images:[], shop_eta:{}, no_po_shops:[] })
       setItems([blankItem()]); setShops([]); setOrigStatus('ใหม่'); setLoading(false); return
     }
     const { data: j, error: e1 } = await supabase.from('jobs').select('*').eq('id', jobId).single()
@@ -349,22 +353,32 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
               <div className="vendor-panel" key={sh} style={{marginBottom:10}}>
                 <div className="vendor-head">
                   <b>{sh}</b>
+                  <label className="nopo-check">
+                    <input type="checkbox" checked={isNoPo(sh)} onChange={()=>toggleNoPo(sh)} />
+                    ไม่เปิด PO ร้านนี้
+                  </label>
                   <div className="shop-eta">
                     <label>📦 วันส่งของร้านนี้</label>
                     <input type="date" value={(job.shop_eta||{})[sh]||''} onChange={e=>set('shop_eta',{...(job.shop_eta||{}),[sh]:e.target.value})} />
                   </div>
                 </div>
+                {isNoPo(sh)
+                  ? <p className="hint" style={{margin:0}}>ร้านนี้ไม่ต้องออก PO — ยังระบุวันส่ง + แจ้งไลน์ได้ปกติ</p>
+                  : (
                 <div className="grid2">
                   <Field label="ชื่อเต็มบริษัทผู้ขาย"><input value={vd.full_name||''} onChange={e=>setVendorField(sh,'full_name',e.target.value)} placeholder="เช่น บริษัท วีระพานิช เชียงใหม่ จำกัด" /></Field>
                   <Field label="สาขา"><input value={vd.branch||''} onChange={e=>setVendorField(sh,'branch',e.target.value)} placeholder="สำนักงานใหญ่" /></Field>
                   <Field label="ที่อยู่"><input value={vd.address||''} onChange={e=>setVendorField(sh,'address',e.target.value)} placeholder="เลขที่ หมู่ ตำบล อำเภอ จังหวัด รหัสไปรษณีย์" /></Field>
                   <Field label="เลขผู้เสียภาษี"><input value={vd.tax_id||''} onChange={e=>setVendorField(sh,'tax_id',e.target.value)} placeholder="0505XXXXXXXXX" /></Field>
                 </div>
+                  )}
               </div>
             )
           })}
           <p className="hint" style={{marginTop:4,marginBottom:10}}>กรอกครั้งแรกครั้งเดียว — ระบบจดจำแต่ละร้านไว้ ใช้งานครั้งหน้าขึ้นเองอัตโนมัติ</p>
-          {job.id && <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🖨️ พิมพ์ PO{poShops.length>1?' (เลือกร้าน)':''}</button>}
+          {job.id && poShopsActive.length > 0
+            ? <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🖨️ พิมพ์ PO{poShopsActive.length>1?' (เลือกร้าน)':''}</button>
+            : job.id && <p className="hint" style={{margin:0}}>ทุกร้านตั้งเป็น "ไม่เปิด PO" — ไม่มีเอกสารต้องพิมพ์</p>}
         </div>
       )}
 
