@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
 import { STATUSES, ETA_TIMES, fmt, nextJobNo, saveJob, deleteJob, calcTotal, notifyLine, loadVendor, saveVendor } from './lib.js'
 
-const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {} })
+const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {}, ship_date: '' })
 
 export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [job, setJob] = useState(null)
@@ -220,6 +220,7 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
                 <input className="i-price" value={it.price} onChange={e=>setItem(it._k,'price',e.target.value)} type="number" placeholder="ราคา/หน่วย" />
               </>
             ) : <span className="i-cmpnote">ใช้ราคาเทียบด้านล่าง</span>}
+            <input className="i-ship" type="date" value={it.ship_date||''} onChange={e=>setItem(it._k,'ship_date',e.target.value)} title="วันส่งของรายการนี้" />
             <button className="i-del" onClick={()=>delItem(it._k)}>×</button>
           </div>
         ))}
