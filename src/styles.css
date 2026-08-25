@@ -155,3 +155,9 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 
 /* แถวเลือกพิมพ์ PO ตามร้าน (หน้า PODoc หลายร้าน) */
 .po-shop-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; flex-wrap: wrap; }
+
+/* ช่องวันส่งต่อร้าน ในพาเนล PO */
+.vendor-head { flex-wrap: wrap; gap: 10px; }
+.shop-eta { display: flex; align-items: center; gap: 8px; }
+.shop-eta label { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.shop-eta input { width: auto; padding: 6px 10px; font-size: 13px; }
