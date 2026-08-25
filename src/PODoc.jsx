@@ -12,9 +12,11 @@ export default function PODoc({ job, items, onClose }) {
     return String(it.shop || '').trim()
   }
   const validItems = items.filter(it => String(it.name||'').trim())
+  const noPoShops = job.no_po_shops || []
   const shopGroups = {}
   validItems.forEach(it => {
     const sh = shopOf(it) || '(ไม่ระบุร้าน)'
+    if (noPoShops.includes(sh)) return  // ข้ามร้านที่ไม่เปิด PO
     if (!shopGroups[sh]) shopGroups[sh] = []
     shopGroups[sh].push(it)
   })
@@ -33,6 +35,13 @@ export default function PODoc({ job, items, onClose }) {
   }, [])
 
   if (!cfg || vendors === null) return <div className="wrap"><p className="loading">กำลังเตรียมเอกสาร…</p></div>
+
+  if (shopNames.length === 0) return (
+    <div className="wrap">
+      <div className="top"><button className="btn ghost" onClick={onClose}>← กลับ</button><h1 style={{fontSize:18}}>ใบสั่งซื้อ (PO) · {job.job_no}</h1></div>
+      <div className="panel"><p>งานนี้ไม่มีร้านที่ต้องออก PO (ทุกร้านตั้งเป็น "ไม่เปิด PO" หรือยังไม่ได้ระบุร้าน)</p></div>
+    </div>
+  )
 
   // สร้าง HTML ของ PO 1 ใบ (1 ร้าน)
   function buildPO(shopName, groupItems) {
