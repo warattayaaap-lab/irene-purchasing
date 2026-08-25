@@ -69,7 +69,7 @@ export async function saveJob(job, items) {
     note: job.note || '', status: job.status || 'ใหม่', po_no: job.po_no || '', chosen_shop: chosen,
     eta: job.eta || null, eta_time: job.eta_time || '', delivery: job.delivery || '',
     order_by: job.order_by || '', need_by: job.need_by || null, total,
-    images: job.images || [], shop_eta: job.shop_eta || {}, no_po_shops: job.no_po_shops || [], updated_at: new Date().toISOString(),
+    images: job.images || [], shop_eta: job.shop_eta || {}, no_po_shops: job.no_po_shops || [], shop_delivery: job.shop_delivery || {}, updated_at: new Date().toISOString(),
   }
 
   let jobId = job.id
