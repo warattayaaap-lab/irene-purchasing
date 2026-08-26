@@ -186,18 +186,19 @@ export async function saveVendor(v) {
 export async function loadRequesters() {
   const { data } = await supabase
     .from('jobs')
-    .select('requester, requester_id')
+    .select('requester, requester_id, job_no')
     .not('requester_id', 'is', null)
     .neq('requester_id', '')
+    .order('job_no', { ascending: true })  // เก่า→ใหม่ เพื่อให้ id ล่าสุดทับ
   if (!data) return []
-  // รวมชื่อซ้ำ เก็บ id ล่าสุดของแต่ละคน (key = requester_id)
+  // รวมตาม "ชื่อ" (ไม่ใช่ id) กันชื่อซ้ำ — เก็บ id ล่าสุดของแต่ละชื่อ
   const map = {}
   data.forEach(r => {
     const id = (r.requester_id || '').trim()
     const name = (r.requester || '').trim()
-    if (!id) return
-    map[id] = name || map[id] || '(ไม่มีชื่อ)'
+    if (!id || !name) return
+    map[name] = id  // job_no เรียงเก่า→ใหม่ ดังนั้นตัวหลังสุด = id ล่าสุด
   })
-  return Object.entries(map).map(([id, name]) => ({ id, name }))
+  return Object.entries(map).map(([name, id]) => ({ id, name }))
     .sort((a, b) => a.name.localeCompare(b.name, 'th'))
 }
