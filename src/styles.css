@@ -178,3 +178,8 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .unpaid-check input { width: auto; cursor: pointer; }
 .unpaid-reason { width: 100%; margin-top: 8px; border-color: #e0b3b3 !important; }
 .unpaid-tag { display: inline-block; background: #fbeaea; color: #c0392b; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+
+/* หน้าตั้งค่า - เลือกคน tag */
+.tag-pick { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 14px; }
+.tag-pick.on { background: var(--accent-soft); border-color: var(--accent); }
+.tag-pick input { width: auto; cursor: pointer; }
