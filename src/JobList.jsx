@@ -34,7 +34,7 @@ export default function JobList({ onOpen, onPrice }) {
     setLoading(true); setError('')
     const { data, error } = await supabase
       .from('jobs')
-      .select('id, job_no, job_date, requester, project, purpose, status, chosen_shop, eta, total, job_items(count)')
+      .select('id, job_no, job_date, requester, project, purpose, status, chosen_shop, eta, total, unpaid, unpaid_reason, job_items(count)')
       .order('job_no', { ascending: false })
     if (error) { setError(error.message); setLoading(false); return }
     setJobs(data || []); setLoading(false)
@@ -163,7 +163,8 @@ export default function JobList({ onOpen, onPrice }) {
                 <div key={j.id} className="card" onClick={() => onOpen(j.id)}>
                   <div className="l">
                     <b>{j.requester || '(ไม่ระบุผู้ขอ)'}</b>
-                    {stale && <span className="stale"> ⚠ ค้าง {daysSince(j.job_date)} วัน</span>}
+                    {j.unpaid && <span className="unpaid-tag" title={j.unpaid_reason||''}>🚫 ไม่จ่าย</span>}
+                    {stale && !j.unpaid && <span className="stale"> ⚠ ค้าง {daysSince(j.job_date)} วัน</span>}
                     {j.project && ' · ' + j.project}
                     {j.purpose && ' — ' + j.purpose}
                     <small>{j.job_no} · สั่ง {fmtDate(j.job_date)} · {itemCount} รายการ
