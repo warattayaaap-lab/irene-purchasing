@@ -31,6 +31,13 @@ export async function loadSettings() {
   return s
 }
 
+// บันทึกค่า setting (upsert รายคีย์)
+export async function saveSetting(key, value) {
+  const { data: existing } = await supabase.from('settings').select('key').eq('key', key).maybeSingle()
+  if (existing) await supabase.from('settings').update({ value }).eq('key', key)
+  else await supabase.from('settings').insert({ key, value })
+}
+
 // สร้างเลขงานใหม่ PJ-YYMM-NNN
 export async function nextJobNo() {
   const { data } = await supabase.from('jobs').select('job_no').order('job_no', { ascending: false }).limit(1)
