@@ -54,7 +54,7 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     setLoading(true); setErr('')
     if (jobId === 'new') {
       const no = await nextJobNo()
-      setJob({ job_no: no, job_date: new Date().toISOString().slice(0,10), requester:'', project:'', purpose:'', note:'', status:'ใหม่', po_no:'', chosen_shop:'', eta:'', eta_time:'', delivery:'', order_by:'', need_by:'', images:[], shop_eta:{}, no_po_shops:[], shop_delivery:{} })
+      setJob({ job_no: no, job_date: new Date().toISOString().slice(0,10), requester:'', project:'', purpose:'', note:'', status:'ใหม่', po_no:'', chosen_shop:'', eta:'', eta_time:'', delivery:'', order_by:'', need_by:'', images:[], shop_eta:{}, no_po_shops:[], shop_delivery:{}, unpaid:false, unpaid_reason:"" })
       setItems([blankItem()]); setShops([]); setOrigStatus('ใหม่'); setLoading(false); return
     }
     const { data: j, error: e1 } = await supabase.from('jobs').select('*').eq('id', jobId).single()
@@ -209,6 +209,15 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
         <div className="grid2" style={{marginTop:12}}>
           <Field label="ใช้ทำอะไร"><input value={job.purpose} onChange={e=>set('purpose',e.target.value)} placeholder="เช่น งานก่อฉาบชั้น 2" /></Field>
           <Field label="หมายเหตุ"><input value={job.note} onChange={e=>set('note',e.target.value)} placeholder="เช่น ของด่วน" /></Field>
+        </div>
+        <div className="unpaid-box">
+          <label className="unpaid-check">
+            <input type="checkbox" checked={!!job.unpaid} onChange={e=>set('unpaid',e.target.checked)} />
+            <b>🚫 ไม่จ่าย / ไม่ซื้อ</b> <span className="hint">(ตัดสินใจไม่ซื้องานนี้)</span>
+          </label>
+          {job.unpaid && (
+            <input className="unpaid-reason" value={job.unpaid_reason||''} onChange={e=>set('unpaid_reason',e.target.value)} placeholder="เหตุผลที่ไม่จ่าย/ไม่ซื้อ เช่น ราคาแพงเกิน, เปลี่ยนแบบ, ยกเลิกงาน" />
+          )}
         </div>
       </div>
 
