@@ -5,6 +5,7 @@ import JobEdit from './JobEdit.jsx'
 import PODoc from './PODoc.jsx'
 import PriceSearch from './PriceSearch.jsx'
 import ItemDetail from './ItemDetail.jsx'
+import Settings from './Settings.jsx'
 
 export default function App() {
   const [view, setView] = useState({ page: 'list' })
@@ -18,6 +19,8 @@ export default function App() {
 
   if (view.page === 'po' && poCtx)
     return <PODoc {...poCtx} onClose={() => setView({ page: 'edit', jobId: poCtx.job.id })} />
+
+  if (view.page === 'settings') return <Settings onBack={() => setView({ page: 'list', ts: Date.now() })} />
 
   if (view.page === 'price') return <PriceSearch q={priceQ} setQ={setPriceQ}
     onBack={() => setView({ page: 'list', ts: Date.now() })}
@@ -33,5 +36,6 @@ export default function App() {
   return <JobList key={view.ts || 0}
     onOpen={(id) => setView({ page: 'edit', jobId: id })}
     onPrice={() => setView({ page: 'price' })}
+    onSettings={() => setView({ page: 'settings' })}
   />
 }
