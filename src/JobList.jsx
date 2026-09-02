@@ -57,9 +57,17 @@ export default function JobList({ onOpen, onPrice, onSettings }) {
         supabase.from('vendors').select('*'),
       ])
       const wb = XLSX.utils.book_new()
+      const CELL_MAX = 32000  // ลิมิต Excel 32767 เผื่อ margin
       const clean = (rows) => (rows||[]).map(r => {
         const o = {}
-        for (const k in r) o[k] = (typeof r[k]==='object' && r[k]!==null) ? JSON.stringify(r[k]) : r[k]
+        for (const k in r) {
+          let v = (typeof r[k]==='object' && r[k]!==null) ? JSON.stringify(r[k]) : r[k]
+          // ตัดข้อความที่ยาวเกินลิมิต Excel (เช่น รูป base64 เก่า, quotes ใหญ่)
+          if (typeof v === 'string' && v.length > CELL_MAX) {
+            v = v.slice(0, CELL_MAX) + '…[ตัดเพราะยาวเกิน]'
+          }
+          o[k] = v
+        }
         return o
       })
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clean(jobsR.data)), 'งาน')
