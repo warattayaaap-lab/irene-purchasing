@@ -199,6 +199,8 @@ export async function loadRequesters() {
     if (!id || !name) return
     map[name] = id  // job_no เรียงเก่า→ใหม่ ดังนั้นตัวหลังสุด = id ล่าสุด
   })
-  return Object.entries(map).map(([name, id]) => ({ id, name }))
+  // ถ้าเจอ id ซ้ำระหว่างคนต่างชื่อ ให้คงไว้ทั้งคู่ (ใช้ชื่อเป็นตัวแยก)
+  // คืน key = ชื่อ (unique) เพื่อให้ React ใช้เป็น key ได้ไม่ชนกัน
+  return Object.entries(map).map(([name, id]) => ({ id, name, key: name }))
     .sort((a, b) => a.name.localeCompare(b.name, 'th'))
 }
