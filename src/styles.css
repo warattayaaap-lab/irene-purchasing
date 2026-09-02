@@ -183,3 +183,8 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .tag-pick { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 14px; }
 .tag-pick.on { background: var(--accent-soft); border-color: var(--accent); }
 .tag-pick input { width: auto; cursor: pointer; }
+
+/* ปุ่มซ่อนคนที่ออกแล้ว ในหน้าตั้งค่า */
+.tag-pick { justify-content: space-between; }
+.hide-btn { background: none; border: 1px solid var(--line); color: var(--muted); font-size: 12px; padding: 4px 10px; border-radius: 7px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.hide-btn:hover { border-color: var(--danger); color: var(--danger); }
