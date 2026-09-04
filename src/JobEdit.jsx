@@ -1,441 +1,268 @@
-import { useState, useEffect } from 'react'
-import { supabase } from './supabase.js'
-import { STATUSES, ETA_TIMES, fmt, nextJobNo, saveJob, deleteJob, calcTotal, notifyLine, loadVendor, saveVendor, loadBuyerTags } from './lib.js'
+:root {
+  --ink: #3a3a2e; --muted: #8a856f; --line: #e0dac8; --accent: #7a8c5f;
+  --accent-soft: #e3e9d5; --bg: #faf8f2; --danger: #a05545; --surface: #fff;
+  --sidebar: #eae6d8; --sidebar-active: #7a8c5f; --topbar: #4a5d3a;
+}
+* { box-sizing: border-box; margin: 0; }
+body { font-family: 'Noto Sans Thai', sans-serif; background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 16px 16px 50px; }
+.top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
+.top h1 { font-size: 22px; font-weight: 600; }
+.btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font: inherit; font-weight: 500; cursor: pointer; }
+.btn.ghost { background: #fff; color: var(--accent); border: 1px solid var(--line); }
+.btn:hover { opacity: .92; }
+input, select { width: 100%; font: inherit; color: inherit; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; }
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar input { flex: 1; min-width: 180px; }
+.chip { background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 15px; font-size: 13.5px; cursor: pointer; color: var(--muted); }
+.chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.grp-head { display: flex; align-items: center; gap: 8px; padding: 10px 4px 6px; cursor: pointer; }
+.grp-head .cnt { margin-left: auto; color: var(--muted); font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 12px; cursor: pointer; }
+.card:hover { border-color: var(--accent); }
+.card .l b { font-size: 14.5px; }
+.card .l small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.card .r { text-align: right; white-space: nowrap; }
+.card .amt { font-weight: 600; font-size: 15px; }
+.status { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; margin-top: 3px; }
+.s-ใหม่ { background: #eef3fb; color: #2c5b9e; }
+.s-กำลังขอราคา { background: #fff4e0; color: #9e6b1e; }
+.s-สั่งแล้ว { background: var(--accent-soft); color: #48582e; }
+.s-ยกเลิก { background: #f3f0f0; color: #7a6d6d; }
+.stale { color: var(--danger); font-size: 12px; font-weight: 600; }
+.empty { text-align: center; color: var(--muted); padding: 50px 0; }
+.loading { text-align: center; color: var(--muted); padding: 60px 0; }
+.caret { color: var(--muted); font-size: 13px; }
 
-const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {}, ship_date: '', self_buy: false })
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; }
+.section-title { font-size: 15px; font-weight: 600; margin: 20px 0 8px; }
+.dtable { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--surface); border-radius: 10px; overflow: hidden; }
+.dtable th { background: #eef3f1; font-weight: 500; padding: 8px 10px; text-align: center; font-size: 12.5px; }
+.dtable td { padding: 8px 10px; text-align: center; border-top: 1px solid var(--line); }
 
-export default function JobEdit({ jobId, onBack, onOpenPO }) {
-  const [job, setJob] = useState(null)
-  const [items, setItems] = useState([])
-  const [shops, setShops] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
-  const [newShop, setNewShop] = useState('')
-  const [origStatus, setOrigStatus] = useState('')
-  const [buyerList, setBuyerList] = useState([])
-  const [vendors, setVendors] = useState({})  // { ชื่อร้าน: {full_name, branch, address, tax_id} }
-  const [oneShop, setOneShop] = useState('')
-  const [pasteBox, setPasteBox] = useState(false)
-  const [pasteText, setPasteText] = useState('')
-  const [zoomImg, setZoomImg] = useState(null)
-  const [showMore, setShowMore] = useState(false)
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 860px) { .grid4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+.etable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.etable th { background: #eef3f1; font-weight: 500; padding: 6px 6px; font-size: 12px; }
+.etable td { padding: 3px 4px; border-top: 1px solid var(--line); }
+.etable input { padding: 6px 7px; border-radius: 7px; font-size: 13px; }
 
-  useEffect(() => { init() }, [jobId])
-  useEffect(() => { loadBuyerTags().then(setBuyerList) }, [])
+.acc { background: var(--surface); border: 1px solid var(--line); border-radius: 11px; margin-bottom: 8px; overflow: hidden; }
+.acc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; }
+.acc-head:hover { background: #fafcfb; }
+.cnt { color: var(--muted); font-size: 13px; font-weight: 400; }
+.ptable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.ptable th { text-align: center; font-weight: 500; color: var(--muted); font-size: 12.5px; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+.ptable td { text-align: center; padding: 8px; border-bottom: 1px solid #f0f4f2; }
+.ptable .prow { cursor: pointer; }
+.ptable .prow:hover td { background: #fafcfb; }
 
-  // หาทุกร้านที่จะออก PO: ร้านที่เลือก (เทียบราคา) + ร้านสั่งตรงทุกร้านในรายการ
-  const poShops = [...new Set([
-    ...(job?.chosen_shop ? [job.chosen_shop] : []),
-    ...items.filter(it => !it.compare && String(it.shop||'').trim()).map(it => it.shop.trim())
-  ])]
-  const poShopsKey = poShops.join('|')
+/* กล่องการ์ดแบบในรูป */
+.card-box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 16px; margin-bottom: 14px; }
+.box-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+.box-title .hint { font-weight: 400; }
+.hint { color: var(--muted); font-size: 12.5px; }
 
-  // โหลดข้อมูลทุกร้าน (จำจากครั้งก่อน) เมื่อรายชื่อร้านเปลี่ยน
-  useEffect(() => {
-    if (!poShops.length) { setVendors({}); return }
-    Promise.all(poShops.map(sh => loadVendor(sh).then(v => [sh, v
-      ? { short_name: v.short_name, full_name: v.full_name||'', branch: v.branch||'', address: v.address||'', tax_id: v.tax_id||'' }
-      : { short_name: sh, full_name:'', branch:'', address:'', tax_id:'' }])))
-      .then(pairs => {
-        setVendors(prev => {
-          const next = { ...prev }
-          pairs.forEach(([sh, vd]) => { if (!next[sh]) next[sh] = vd })  // ไม่ทับที่ผู้ใช้กำลังพิมพ์
-          return next
-        })
-      })
-  }, [poShopsKey])
+/* รายการของ แบบช่องยาว */
+.item-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.item-row input { padding: 10px 12px; }
+.i-name { flex: 1; min-width: 140px; }
+.i-qty { width: 72px; text-align: center; }
+.i-unit { width: 72px; text-align: center; }
+.i-shop { width: 110px; }
+.i-price { width: 96px; text-align: right; }
+.i-cmp { background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 9px 14px; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap; min-width: 64px; }
+.i-cmp.on { background: var(--accent-soft); color: #48582e; border-color: var(--accent); font-weight: 500; }
+.i-cmpnote { flex: 1; color: var(--muted); font-size: 12.5px; padding-left: 4px; }
+.i-del { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; }
+.add-row { background: none; border: 1px dashed var(--line); border-radius: 10px; padding: 10px; font: inherit; font-size: 14px; color: var(--accent); cursor: pointer; }
 
-  const setVendorField = (shop, field, val) => setVendors(prev => ({ ...prev, [shop]: { ...(prev[shop]||{short_name:shop}), [field]: val } }))
-  const noPoShops = job?.no_po_shops || []
-  const isNoPo = (sh) => noPoShops.includes(sh)
-  const toggleNoPo = (sh) => set('no_po_shops', isNoPo(sh) ? noPoShops.filter(x=>x!==sh) : [...noPoShops, sh])
-  const poShopsActive = poShops.filter(sh => !isNoPo(sh))
+/* panel เทียบราคา */
+.compare-box { background: #fafcfb; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.cmp-table th { padding: 9px 10px; font-weight: 500; text-align: center; border-bottom: 1px solid var(--line); }
+.cmp-table th.chosen, .cmp-table td.chosen { background: var(--accent-soft); }
+.cmp-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid #eef3f1; }
+.cmp-in { width: 78px; text-align: right; padding: 6px 8px; }
+.cmp-in.cheap { border-color: var(--accent); background: #f0faf6; font-weight: 600; color: var(--accent); }
+.cmp-sum td { border-top: 2px solid var(--ink); font-size: 14px; }
+.cheap-tag { display: inline-block; background: var(--accent); color: #fff; font-size: 11px; padding: 1px 8px; border-radius: 999px; margin-top: 3px; }
 
-  async function init() {
-    setLoading(true); setErr('')
-    if (jobId === 'new') {
-      const no = await nextJobNo()
-      setJob({ job_no: no, job_date: new Date().toISOString().slice(0,10), requester:'', project:'', purpose:'', note:'', status:'ใหม่', po_no:'', chosen_shop:'', eta:'', eta_time:'', delivery:'', order_by:'', need_by:'', images:[], shop_eta:{}, no_po_shops:[], shop_delivery:{}, unpaid:false, unpaid_reason:"" })
-      setItems([blankItem()]); setShops([]); setOrigStatus('ใหม่'); setLoading(false); return
-    }
-    const { data: j, error: e1 } = await supabase.from('jobs').select('*').eq('id', jobId).single()
-    if (e1) { setErr(e1.message); setLoading(false); return }
-    const { data: its } = await supabase.from('job_items').select('*').eq('job_id', jobId).order('sort_order')
-    const rows = (its || []).map(it => ({ ...it, _k: String(it.id), quotes: it.quotes || {} }))
-    const shopSet = new Set()
-    rows.forEach(it => Object.keys(it.quotes || {}).forEach(s => shopSet.add(s)))
-    if (j.chosen_shop) shopSet.add(j.chosen_shop)
-    setJob({ ...j, job_date: j.job_date || '', eta: j.eta || '', need_by: j.need_by || '' })
-    setItems(rows.length ? rows : [blankItem()])
-    setShops([...shopSet]); setOrigStatus(j.status)
-    setLoading(false)
-  }
+/* พาเนลข้อมูลผู้ขาย (PO) */
+.vendor-panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.vendor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.vendor-head b { font-size: 15px; }
 
-  const set = (k, v) => setJob(j => ({ ...j, [k]: v }))
-  const setItem = (k, field, v) => setItems(arr => arr.map(it => it._k === k ? { ...it, [field]: v } : it))
-  const setQuote = (k, shop, v) => setItems(arr => arr.map(it => it._k === k ? { ...it, quotes: { ...it.quotes, [shop]: v } } : it))
-  const addItem = () => setItems(arr => [...arr, blankItem()])
-  const delItem = (k) => setItems(arr => arr.filter(it => it._k !== k))
+/* ปุ่มกาง/หุบ วางจากไลน์ */
+.acc-toggle { background: none; border: none; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; padding: 4px 0; }
+textarea { font-family: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
-  function addShop() {
-    const s = newShop.trim()
-    if (!s || shops.includes(s)) return
-    setShops([...shops, s]); setNewShop('')
-  }
-  function removeShop(s) {
-    setShops(shops.filter(x => x !== s))
-    setItems(arr => arr.map(it => { const q = { ...it.quotes }; delete q[s]; return { ...it, quotes: q } }))
-    if (job.chosen_shop === s) set('chosen_shop', '')
-  }
+/* ปุ่มลบในการ์ดหน้าแรก */
+.card { position: relative; }
+.card-del { background: none; border: none; cursor: pointer; font-size: 15px; opacity: .35; padding: 4px 6px; border-radius: 7px; margin-top: 4px; transition: opacity .15s, background .15s; }
+.card-del:hover { opacity: 1; background: #f6ecec; }
 
-  async function doSave() {
-    setSaving(true); setErr('')
-    try {
-      const id = await saveJob(job, items)
-      // จำข้อมูลทุกร้านไว้ใช้ครั้งหน้า
-      for (const sh of poShops) {
-        const vd = vendors[sh]
-        if (vd && (vd.full_name || vd.address || vd.tax_id)) await saveVendor({ ...vd, short_name: sh })
-      }
-      const statusChanged = job.status !== origStatus
-      const shouldNotify = statusChanged && (job.status === 'สั่งแล้ว' || job.status === 'ยกเลิก')
-      let notifyMsg = ''
-      if (shouldNotify) {
-        const r = await notifyLine('order', { ...job, id }, items)
-        if (r.ok) notifyMsg = ' · แจ้งกลุ่มไลน์แล้ว 📨'
-        else if (r.skipped) notifyMsg = ''
-        else notifyMsg = ' · (แจ้งไลน์ไม่สำเร็จ)'
-      }
-      setSaving(false)
-      alert('บันทึกงานแล้ว ✓ ' + job.job_no + notifyMsg)
-      onBack(true)
-    } catch (e) { setSaving(false); setErr(e.message || String(e)) }
-  }
-  async function doDelete() {
-    if (!job.id) return
-    if (!confirm('ลบงาน ' + job.job_no + ' ถาวร?\nเอาคืนไม่ได้')) return
-    try { await deleteJob(job.id); alert('ลบแล้ว'); onBack(true) }
-    catch (e) { setErr(e.message) }
-  }
+/* dropdown เปลี่ยนสถานะเร็วในการ์ด */
+.status-sel { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; font-family: inherit; margin-top: 3px; max-width: 130px; -webkit-appearance: none; appearance: none; text-align: center; }
+.status-sel:focus { outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
+.status-sel.s-ใหม่ { background: #eef3fb; color: #2c5b9e; }
+.status-sel.s-กำลังขอราคา { background: #fff4e0; color: #9e6b1e; }
+.status-sel.s-สั่งแล้ว { background: var(--accent-soft); color: #48582e; }
+.status-sel.s-ยกเลิก { background: #f3f0f0; color: #7a6d6d; }
 
-  // ใช้ร้านเดียวกับทุกรายการ (สั่งตรง ไม่เทียบ)
-  function applyOneShop() {
-    const sh = oneShop.trim()
-    if (!sh) return
-    setItems(arr => arr.map(it => ({ ...it, compare: false, shop: sh })))
-    set('chosen_shop', '')
-  }
+/* แถวงานค้างในหน้าสรุปรายเดือน */
+.stale-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid #f0e4e4; cursor: pointer; font-size: 14px; }
+.stale-row:first-of-type { border-top: none; }
+.stale-row:hover { opacity: .8; }
 
-  // วางรายการจากข้อความไลน์ (บรรทัดละรายการ)
-  function applyPaste() {
-    const lines = pasteText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-    if (!lines.length) { setPasteBox(false); return }
-    const parsed = lines.map(line => {
-      const clean = line.replace(/^[-\u2022*]\s*/, '')
-      const m = clean.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(\S*)$/)
-      if (m) return { ...blankItem(), name: m[1].trim(), qty: m[2], unit: m[3] || '' }
-      return { ...blankItem(), name: clean }
-    })
-    setItems(arr => {
-      const nonEmpty = arr.filter(it => String(it.name||'').trim())
-      return [...nonEmpty, ...parsed]
-    })
-    setPasteText(''); setPasteBox(false)
-  }
 
-  // ลบรูปแนบ
-  function delImage(idx) {
-    set('images', (job.images||[]).filter((_,i)=>i!==idx))
-  }
+/* หน้าแรก จัดกระชับ */
+.top-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.search { width: 100%; margin-bottom: 10px; }
+.chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 6px; }
+.grp-head { display: flex; align-items: center; gap: 8px; padding: 8px 4px 4px; cursor: pointer; }
+.card { padding: 11px 14px; margin-bottom: 6px; }
+.card .l small { margin-top: 3px; }
 
-  // คัดลอกรายการส่งร้าน
-  function copyItems() {
-    const list = items.filter(it => String(it.name||'').trim())
-    if (!list.length) { alert('ยังไม่มีรายการ'); return }
-    const byShop = {}, order = []
-    list.forEach(it => {
-      let shop = it.compare ? (job.chosen_shop||'') : String(it.shop||'').trim()
-      if (!shop) shop = '__none__'
-      if (!byShop[shop]) { byShop[shop] = []; order.push(shop) }
-      let line = it.name
-      if (it.qty) line += ' ' + it.qty + (it.unit ? ' ' + it.unit : '')
-      byShop[shop].push(line)
-    })
-    let text
-    if (order.length === 1) text = byShop[order[0]].join('\n')
-    else text = order.map(sh => (sh==='__none__'?'(ยังไม่ระบุร้าน)':'📍 '+sh) + '\n' + byShop[sh].join('\n')).join('\n\n')
-    navigator.clipboard?.writeText(text).then(()=>alert('คัดลอกแล้ว ✓ วางส่งร้านได้เลย')).catch(()=>alert('คัดลอกไม่ได้'))
-  }
+/* แถวชิป + เครื่องมือ (ยุบกาง/กรองวันที่) */
+.chips-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.list-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mini-btn { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12.5px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.mini-btn:hover { border-color: var(--accent); color: var(--accent); }
+.date-filter { width: auto; padding: 5px 9px; font-size: 12.5px; border-radius: 8px; }
 
-  if (loading) return <div className="wrap"><p className="loading">กำลังโหลด…</p></div>
-  if (!job) return <div className="wrap"><p className="empty" style={{color:'var(--danger)'}}>{err}</p><button className="btn ghost" onClick={()=>onBack()}>← กลับ</button></div>
+/* จัดปุ่มในการ์ดฝั่งขวาให้ถังขยะเด่นขึ้น ไม่ชิดขอบ */
+.r-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; justify-content: flex-end; }
+.card-del { background: #fbeeee; border: 1px solid #e6d0d0; color: var(--danger); cursor: pointer; font-size: 12.5px; padding: 5px 10px; border-radius: 8px; opacity: 1; white-space: nowrap; font-family: inherit; }
+.card-del:hover { background: #f5dede; }
 
-  const imgSrc = (im) => {
-    if (!im) return ''
-    if (im.url) return im.url
-    if (im.thumb) return im.thumb
-    if (im.base64) return im.base64.startsWith('data:') ? im.base64 : `data:${im.type||'image/jpeg'};base64,${im.base64}`
-    return ''
-  }
-  const total = calcTotal(items, job.chosen_shop)
-  const compareItems = items.filter(it => it.compare && String(it.name||'').trim())
+/* จุดสีนำหน้าชื่อสถานะในหัวกลุ่ม */
+.grp-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.grp-dot.s-ใหม่ { background: #2c5b9e; }
+.grp-dot.s-กำลังขอราคา { background: #9e6b1e; }
+.grp-dot.s-สั่งแล้ว { background: var(--accent); }
+.grp-dot.s-ยกเลิก { background: #a89a9a; }
 
-  return (
-    <div className="wrap">
-      <div className="top">
-        <button className="btn ghost" onClick={()=>onBack()}>← กลับ</button>
-        <h1 style={{fontSize:18}}>{job.id ? job.job_no : 'งานใหม่ ' + job.job_no}</h1>
-      </div>
+/* การ์ดสรุปในหน้ารายละเอียดของ */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+@media (max-width: 560px) { .stat-grid { grid-template-columns: 1fr; } }
+.stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; }
+.stat-label { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+.stat-val { font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
 
-      {err && <div className="panel" style={{color:'var(--danger)', marginBottom:12}}>{err}</div>}
+/* แถวเลือกพิมพ์ PO ตามร้าน (หน้า PODoc หลายร้าน) */
+.po-shop-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; flex-wrap: wrap; }
 
-      {/* สเต็ป 1 — ข้อมูลงาน */}
-      <div className="card-box">
-        <div className="step-head"><span className="step-num">1</span><span className="step-title">ข้อมูลงาน</span></div>
-        <div className="grid2">
-          <Field label="ผู้ขอ"><input value={job.requester} onChange={e=>set('requester',e.target.value)} placeholder="ช่าง / ชื่อคนขอ" /></Field>
-          <Field label="โปรเจกต์ / บ้าน"><input value={job.project} onChange={e=>set('project',e.target.value)} placeholder="เช่น บ้านเจมส์" /></Field>
-          <Field label="สถานะ"><select value={job.status} onChange={e=>set('status',e.target.value)}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></Field>
-          <Field label="คนไปรับของ (แจ้งเตือนไลน์)">
-            <select value={job.requester_id||''} onChange={e=>set('requester_id',e.target.value)}>
-              <option value="">— ไม่ tag ใคร —</option>
-              {buyerList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              {job.requester_id && !buyerList.some(r=>r.id===job.requester_id) && <option value={job.requester_id}>{job.requester||'(คนเดิม)'}</option>}
-            </select>
-          </Field>
-        </div>
-        <div style={{marginTop:12}}>
-          <Field label="ใช้ทำอะไร"><input value={job.purpose} onChange={e=>set('purpose',e.target.value)} placeholder="เช่น งานก่อฉาบชั้น 2" /></Field>
-        </div>
+/* ช่องวันส่งต่อร้าน ในพาเนล PO */
+.vendor-head { flex-wrap: wrap; gap: 10px; }
+.shop-eta { display: flex; align-items: center; gap: 8px; }
+.shop-eta label { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.shop-eta input { width: auto; padding: 6px 10px; font-size: 13px; }
 
-        <button className="more-toggle" onClick={()=>setShowMore(m=>!m)}>
-          {showMore ? '▾' : '▸'} ข้อมูลเพิ่มเติม (เลข PO, หมายเหตุ, การรับของ)
-        </button>
-        {showMore && (
-          <div className="grid2" style={{marginTop:10}}>
-            <Field label="เลข PO / บิล (ถ้ามี)"><input value={job.po_no} onChange={e=>set('po_no',e.target.value)} placeholder="จาก PEAK หรือเลขบิล" /></Field>
-            <Field label="ใครเป็นคนสั่ง"><select value={job.order_by} onChange={e=>set('order_by',e.target.value)}><option value="">จัดซื้อสั่ง</option><option>หน้างานสั่งเอง</option></select></Field>
-            <Field label="ต้องการใช้ (หน้างานระบุ)"><input type="date" value={job.need_by||''} onChange={e=>set('need_by',e.target.value)} /></Field>
-            <Field label="หมายเหตุ"><input value={job.note} onChange={e=>set('note',e.target.value)} placeholder="เช่น ของด่วน" /></Field>
-          </div>
-        )}
+/* ติ๊กไม่เปิด PO ต่อร้าน */
+.nopo-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.nopo-check input { width: auto; cursor: pointer; }
 
-        <div className="unpaid-box">
-          <label className="unpaid-check">
-            <input type="checkbox" checked={!!job.unpaid} onChange={e=>set('unpaid',e.target.checked)} />
-            <b>🚫 ไม่จ่าย / ไม่ซื้อ</b> <span className="hint">(ตัดสินใจไม่ซื้องานนี้)</span>
-          </label>
-          {job.unpaid && (
-            <input className="unpaid-reason" value={job.unpaid_reason||''} onChange={e=>set('unpaid_reason',e.target.value)} placeholder="เหตุผลที่ไม่จ่าย/ไม่ซื้อ เช่น ราคาแพงเกิน, เปลี่ยนแบบ, ยกเลิกงาน" />
-          )}
-        </div>
-      </div>
+/* ช่องวันส่งท้ายแถวรายการ */
+.i-ship { width: 132px; padding: 8px 8px; font-size: 12.5px; }
 
-      {/* สเต็ป 2 — รายการของ */}
-      <div className="card-box">
-        <div className="step-head"><span className="step-num">2</span><span className="step-title">รายการของ</span>
-          <span className="step-hint">ติ๊ก "เทียบ" ถ้าขอหลายร้าน · "ซื้อเอง" ถ้าหน้างานไปซื้อ</span></div>
-        {items.map((it, idx) => (
-          <div className="item-row" key={it._k}>
-            <span className="i-num">{idx+1}</span>
-            <input className="i-name" value={it.name} onChange={e=>setItem(it._k,'name',e.target.value)} placeholder="ชื่อของ" />
-            <input className="i-qty" value={it.qty} onChange={e=>setItem(it._k,'qty',e.target.value)} type="number" placeholder="จำนวน" />
-            <input className="i-unit" value={it.unit} onChange={e=>setItem(it._k,'unit',e.target.value)} placeholder="หน่วย" />
-            <button className={'i-cmp'+(it.compare?' on':'')} onClick={()=>setItem(it._k,'compare',!it.compare)}>{it.compare?'✓ เทียบ':'เทียบ'}</button>
-            {!it.compare ? (
-              <>
-                <input className="i-shop" value={it.shop} onChange={e=>setItem(it._k,'shop',e.target.value)} placeholder="ร้านที่สั่ง" />
-                {!it.self_buy && <input className="i-price" value={it.price} onChange={e=>setItem(it._k,'price',e.target.value)} type="number" placeholder="ราคา/หน่วย" />}
-                {it.self_buy && <span className="i-price-self">รอบิล</span>}
-                <button className={'i-self'+(it.self_buy?' on':'')} onClick={()=>setItem(it._k,'self_buy',!it.self_buy)} title="หน้างานไปซื้อเอง ไม่ต้องกรอกราคา">{it.self_buy?'✓ ซื้อเอง':'ซื้อเอง'}</button>
-              </>
-            ) : <span className="i-cmpnote">ใช้ราคาเทียบด้านล่าง</span>}
-            <input className="i-ship" type="date" value={it.ship_date||''} onChange={e=>setItem(it._k,'ship_date',e.target.value)} title="วันส่ง/วันรับของรายการนี้" />
-            <button className="i-del" onClick={()=>delItem(it._k)}>×</button>
-          </div>
-        ))}
-        <div style={{display:'flex',gap:8,marginTop:4}}>
-          <button className="add-row" onClick={addItem} style={{flex:'0 0 auto'}}>+ เพิ่มรายการ</button>
-          <button className="add-row" onClick={copyItems} style={{flex:1}}>📋 คัดลอกส่งร้าน</button>
-        </div>
+/* ตัวเลือกส่ง/รับเอง ต่อร้าน */
+.shop-deliv { padding: 6px 10px; font-size: 12.5px; border-radius: 8px; border: 1px solid var(--line); font-family: inherit; cursor: pointer; }
 
-        {/* สั่งตรงร้านเดียวทั้งงาน */}
-        <div style={{display:'flex',gap:8,marginTop:10,alignItems:'center',flexWrap:'wrap'}}>
-          <input value={oneShop} onChange={e=>setOneShop(e.target.value)} placeholder="สั่งตรงร้านเดียวทั้งงาน? พิมพ์/เลือกร้าน…" style={{flex:1,minWidth:200}} />
-          <button className="btn ghost" onClick={applyOneShop}>ใช้ร้านนี้ทุกรายการ</button>
-        </div>
+/* ธงไม่จ่าย/ไม่ซื้อ */
+.unpaid-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.unpaid-check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.unpaid-check input { width: auto; cursor: pointer; }
+.unpaid-reason { width: 100%; margin-top: 8px; border-color: #e0b3b3 !important; }
+.unpaid-tag { display: inline-block; background: #fbeaea; color: #c0392b; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
 
-        {/* วางรายการจากไลน์ */}
-        <div style={{marginTop:8}}>
-          <button className="acc-toggle" onClick={()=>setPasteBox(!pasteBox)}>{pasteBox?'▾':'▸'} วางรายการจากไลน์ทั้งก้อน</button>
-          {pasteBox && (
-            <div style={{marginTop:8}}>
-              <textarea value={pasteText} onChange={e=>setPasteText(e.target.value)} rows={5} placeholder={'วางข้อความจากไลน์ บรรทัดละรายการ เช่น\nปูนก่อ 10 ถุง\nอิฐมอญ 500 ก้อน'} style={{width:'100%',resize:'vertical'}} />
-              <button className="btn ghost" onClick={applyPaste} style={{marginTop:6}}>เพิ่มรายการจากข้อความ</button>
-            </div>
-          )}
-        </div>
-      </div>
+/* หน้าตั้งค่า - เลือกคน tag */
+.tag-pick { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 14px; }
+.tag-pick.on { background: var(--accent-soft); border-color: var(--accent); }
+.tag-pick input { width: auto; cursor: pointer; }
 
-      {/* รูปแนบ — โพย/รูปที่หน้างานถ่ายส่งมา */}
-      <div className="card-box">
-        <div className="box-title">รูปแนบ <span className="hint">— โพย/รายการที่หน้างานถ่ายส่งมา</span></div>
-        {(job.images && job.images.length > 0) ? (
-          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            {job.images.map((im,i)=>(
-              <div key={i} style={{position:'relative'}}>
-                <img src={imgSrc(im)} alt={'รูป '+(i+1)} onClick={()=>setZoomImg(imgSrc(im))}
-                  style={{width:96,height:96,objectFit:'cover',borderRadius:10,border:'1px solid var(--line)',cursor:'zoom-in'}} />
-                <b onClick={()=>delImage(i)} style={{position:'absolute',top:-8,right:-8,background:'#fff',border:'1px solid var(--line)',borderRadius:'50%',width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14}}>×</b>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{textAlign:'center',color:'var(--muted)',padding:'18px',border:'1px dashed var(--line)',borderRadius:10}}>📷 ยังไม่มีรูปแนบ (รูปจากหน้างานจะมาโผล่ที่นี่)</div>
-        )}
-      </div>
+/* ปุ่มซ่อนคนที่ออกแล้ว ในหน้าตั้งค่า */
+.tag-pick { justify-content: space-between; }
+.hide-btn { background: none; border: 1px solid var(--line); color: var(--muted); font-size: 12px; padding: 4px 10px; border-radius: 7px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.hide-btn:hover { border-color: var(--danger); color: var(--danger); }
 
-      {/* popup ขยายรูป — กดพื้นดำหรือปุ่ม × เพื่อปิด */}
-      {zoomImg && (
-        <div onClick={()=>setZoomImg(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,cursor:'zoom-out'}}>
-          <span style={{position:'absolute',top:16,right:20,color:'#fff',fontSize:32,cursor:'pointer',lineHeight:1}}>×</span>
-          <img src={zoomImg} alt="รูปขยาย" onClick={(e)=>e.stopPropagation()} style={{maxWidth:'92%',maxHeight:'92%',objectFit:'contain',borderRadius:8}} />
-        </div>
-      )}
+/* ===== Layout เมนูซ้าย ===== */
+.app-shell { display: flex; min-height: 100vh; }
+.app-main { flex: 1; min-width: 0; }
+.app-main .wrap { max-width: 100%; }
 
-      {/* เทียบราคา — panel แยก แบบในรูป */}
-      {compareItems.length > 0 && (
-        <div className="card-box compare-box">
-          <div className="box-title">เปรียบเทียบราคา <span className="hint">(เฉพาะรายการที่ติ๊กเทียบ)</span></div>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
-            {shops.map(s => (
-              <span key={s} className="chip on" style={{display:'flex',gap:6,alignItems:'center'}}>{s}<b style={{cursor:'pointer'}} onClick={()=>removeShop(s)}>×</b></span>
-            ))}
-            <input value={newShop} onChange={e=>setNewShop(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addShop()} placeholder="พิมพ์ชื่อร้าน แล้ว Enter" style={{maxWidth:200}} />
-          </div>
+.sidebar { width: 180px; flex-shrink: 0; background: var(--sidebar); border-right: 0.5px solid var(--line); display: flex; flex-direction: column; }
+.sidebar-head { padding: 18px 16px; border-bottom: 0.5px solid var(--line); display: flex; align-items: center; gap: 8px; }
+.sidebar-logo { font-size: 20px; }
+.sidebar-title { font-size: 16px; font-weight: 600; color: var(--ink); }
+.sidebar-nav { padding: 10px 8px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.sidebar-foot { padding: 10px 8px; border-top: 0.5px solid var(--line); }
+.sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: none; border: none; font: inherit; font-size: 13.5px; color: var(--muted); cursor: pointer; width: 100%; text-align: left; }
+.sidebar-item:hover { background: rgba(0,0,0,0.04); }
+.sidebar-item.on { background: var(--sidebar-active); color: #fff; font-weight: 500; }
+.sidebar-icon { font-size: 16px; }
 
-          {shops.length > 0 && (
-            <div style={{overflowX:'auto'}}>
-              <table className="cmp-table">
-                <thead>
-                  <tr><th style={{textAlign:'left'}}>รายการ</th>{shops.map(s => {
-                    const on = job.chosen_shop===s
-                    return <th key={s} className={on?'chosen':''}>{s}</th>
-                  })}</tr>
-                </thead>
-                <tbody>
-                  {compareItems.map(it => {
-                    const prices = shops.map(s=>it.quotes[s]).filter(v=>v!==''&&v!=null&&v!==undefined).map(Number)
-                    const min = prices.length?Math.min(...prices):null
-                    // ราคาล่าสุด/ร้านล่าสุด (แสดงใต้ชื่อ)
-                    return (
-                      <tr key={it._k}>
-                        <td style={{textAlign:'left'}}><b>{it.name}</b><div className="hint">{fmt(it.qty)} {it.unit}</div></td>
-                        {shops.map(s => {
-                          const v = it.quotes[s]
-                          const num = (v===''||v==null)?null:Number(v)
-                          const cheap = num!==null && num===min
-                          const on = job.chosen_shop===s
-                          return (
-                            <td key={s} className={on?'chosen':''}>
-                              <input value={it.quotes[s]||''} onChange={e=>setQuote(it._k,s,e.target.value)} type="number" className={'cmp-in'+(cheap?' cheap':'')} />
-                              {num!==null && it.qty && <div className="hint">= {fmt(num*Number(it.qty))}</div>}
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    )
-                  })}
-                  <tr className="cmp-sum">
-                    <td style={{textAlign:'left',fontWeight:600}}>ราคารวมต่อร้าน</td>
-                    {shops.map(s => {
-                      const sum = compareItems.reduce((a,it)=>a+Number(it.quotes[s]||0)*Number(it.qty||0),0)
-                      const allSums = shops.map(sh=>compareItems.reduce((a,it)=>a+Number(it.quotes[sh]||0)*Number(it.qty||0),0)).filter(x=>x>0)
-                      const cheapest = allSums.length?Math.min(...allSums):null
-                      const isCheap = sum>0 && sum===cheapest
-                      const on = job.chosen_shop===s
-                      return (
-                        <td key={s} className={on?'chosen':''}>
-                          <b>{fmt(sum)} ฿</b>
-                          {isCheap && <div className="cheap-tag">ถูกสุด</div>}
-                          {!isCheap && sum>0 && cheapest && <div className="hint" style={{color:'var(--danger)'}}>แพงกว่า +{fmt(sum-cheapest)} ฿</div>}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                  <tr>
-                    <td></td>
-                    {shops.map(s => {
-                      const on = job.chosen_shop===s
-                      return <td key={s} style={{textAlign:'center',padding:'8px'}}>
-                        <button className={on?'btn':'btn ghost'} style={{fontSize:13,padding:'6px 12px'}} onClick={()=>set('chosen_shop', on?'':s)}>{on?'✓ ร้านที่เลือก':'เลือกร้านนี้'}</button>
-                      </td>
-                    })}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* พาเนลใบสั่งซื้อ PO — โผล่เมื่อมีร้าน (แยกกล่องต่อร้าน กรณีหลายร้าน) */}
-      {poShops.length > 0 && (
-        <div className="card-box">
-          <div className="box-title">ใบสั่งซื้อ (PO)
-            {poShops.length > 1 && <span className="hint"> — งานนี้สั่ง {poShops.length} ร้าน ออก PO แยกใบ</span>}
-          </div>
-          {poShops.map(sh => {
-            const vd = vendors[sh] || { full_name:'', branch:'', address:'', tax_id:'' }
-            return (
-              <div className="vendor-panel" key={sh} style={{marginBottom:10}}>
-                <div className="vendor-head">
-                  <b>{sh}</b>
-                  <label className="nopo-check">
-                    <input type="checkbox" checked={isNoPo(sh)} onChange={()=>toggleNoPo(sh)} />
-                    ไม่เปิด PO ร้านนี้
-                  </label>
-                  <select className="shop-deliv" value={(job.shop_delivery||{})[sh]||'ส่ง'} onChange={e=>set('shop_delivery',{...(job.shop_delivery||{}),[sh]:e.target.value})}>
-                    <option value="ส่ง">🚚 ร้านจัดส่ง</option>
-                    <option value="รับเอง">🏃 ไปรับเอง</option>
-                  </select>
-                  <div className="shop-eta">
-                    <label>📦 {((job.shop_delivery||{})[sh]==='รับเอง')?'วันเข้ารับ':'วันส่งของ'}ร้านนี้</label>
-                    <input type="date" value={(job.shop_eta||{})[sh]||''} onChange={e=>set('shop_eta',{...(job.shop_eta||{}),[sh]:e.target.value})} />
-                  </div>
-                </div>
-                {isNoPo(sh)
-                  ? <p className="hint" style={{margin:0}}>ร้านนี้ไม่ต้องออก PO — ยังระบุวันส่ง + แจ้งไลน์ได้ปกติ</p>
-                  : (
-                <div className="grid2">
-                  <Field label="ชื่อเต็มบริษัทผู้ขาย"><input value={vd.full_name||''} onChange={e=>setVendorField(sh,'full_name',e.target.value)} placeholder="เช่น บริษัท วีระพานิช เชียงใหม่ จำกัด" /></Field>
-                  <Field label="สาขา"><input value={vd.branch||''} onChange={e=>setVendorField(sh,'branch',e.target.value)} placeholder="สำนักงานใหญ่" /></Field>
-                  <Field label="ที่อยู่"><input value={vd.address||''} onChange={e=>setVendorField(sh,'address',e.target.value)} placeholder="เลขที่ หมู่ ตำบล อำเภอ จังหวัด รหัสไปรษณีย์" /></Field>
-                  <Field label="เลขผู้เสียภาษี"><input value={vd.tax_id||''} onChange={e=>setVendorField(sh,'tax_id',e.target.value)} placeholder="0505XXXXXXXXX" /></Field>
-                </div>
-                  )}
-              </div>
-            )
-          })}
-          <p className="hint" style={{marginTop:4,marginBottom:10}}>กรอกครั้งแรกครั้งเดียว — ระบบจดจำแต่ละร้านไว้ ใช้งานครั้งหน้าขึ้นเองอัตโนมัติ</p>
-          {job.id && poShopsActive.length > 0
-            ? <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🖨️ พิมพ์ PO{poShopsActive.length>1?' (เลือกร้าน)':''}</button>
-            : job.id && <p className="hint" style={{margin:0}}>ทุกร้านตั้งเป็น "ไม่เปิด PO" — ไม่มีเอกสารต้องพิมพ์</p>}
-        </div>
-      )}
-
-      <p style={{fontSize:18,fontWeight:600,marginTop:16}}>ยอดรวม {fmt(total)} ฿</p>
-
-      <div style={{display:'flex',gap:8,marginTop:16,flexWrap:'wrap'}}>
-        <button className="btn" onClick={doSave} disabled={saving}>{saving?'กำลังบันทึก…':'บันทึกงาน'}</button>
-        {job.id && <button className="btn ghost" onClick={()=>onOpenPO(job, items)}>🧾 พิมพ์ PO</button>}
-        {job.id && <button className="btn ghost" style={{color:'var(--danger)',borderColor:'#e6c9c9'}} onClick={doDelete}>ลบงาน</button>}
-      </div>
-    </div>
-  )
+@media (max-width: 720px) {
+  .app-shell { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
+  .sidebar-head { display: none; }
+  .sidebar-nav { flex-direction: row; padding: 8px; }
+  .sidebar-foot { border-top: none; border-left: 0.5px solid var(--line); }
+  .sidebar-item span:not(.sidebar-icon) { display: none; }
 }
 
-function Field({ label, children }) {
-  return <div><label style={{display:'block',fontSize:13,fontWeight:500,marginBottom:5,color:'var(--muted)'}}>{label}</label>{children}</div>
+/* ===== การ์ดสรุป 3 อัน ===== */
+.stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-c { border-radius: 10px; padding: 12px 14px; cursor: pointer; }
+.stat-c-label { font-size: 12.5px; margin-bottom: 3px; }
+.stat-c-num { font-size: 22px; font-weight: 600; }
+.stat-danger { background: #f0ddd8; } .stat-danger .stat-c-label { color: #a05545; } .stat-danger .stat-c-num { color: #8a4030; }
+.stat-new { background: #e3e9d5; } .stat-new .stat-c-label { color: #5c6e3d; } .stat-new .stat-c-num { color: #48582e; }
+.stat-wait { background: #f3e7cf; } .stat-wait .stat-c-label { color: #997a35; } .stat-wait .stat-c-num { color: #7a5f24; }
+
+/* ===== หัวสเต็ปในหน้าแก้งาน ===== */
+.step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.step-hint { font-size: 12px; color: var(--muted); font-weight: 400; }
+.more-toggle { background: none; border: none; color: var(--accent); font: inherit; font-size: 12.5px; cursor: pointer; padding: 10px 0 2px; margin-top: 8px; border-top: 0.5px solid var(--line); width: 100%; text-align: left; }
+
+/* ===== รายการของ — เลขลำดับ + ปุ่มซื้อเอง ===== */
+.i-num { width: 18px; flex-shrink: 0; text-align: center; font-size: 12px; color: var(--muted); }
+.i-self { background: #fff; border: 0.5px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.i-self.on { background: #b8845a; color: #fff; border-color: #b8845a; font-weight: 500; }
+.i-price-self { width: 90px; flex-shrink: 0; text-align: right; font-size: 12px; color: var(--danger); padding: 8px 4px; }
+
+/* ===== ตารางรายการของ (grid มีหัวคอลัมน์) ===== */
+.items-table { border: 0.5px solid var(--line); border-radius: 10px; overflow: hidden; }
+.it-head, .it-row {
+  display: grid;
+  grid-template-columns: 24px minmax(120px,1fr) 56px 52px 60px 90px 68px 56px 116px 24px;
+  gap: 6px; align-items: center; padding: 8px 10px;
+}
+.it-head { background: #f1eee2; font-size: 11px; color: var(--muted); }
+.it-row { border-top: 0.5px solid #f0ede0; }
+.it-row:nth-child(odd) { background: #fdfcf7; }
+.it-head span { text-align: center; }
+.it-head .col-name { text-align: left; }
+.it-row input, .it-row .col-cmp button { padding: 7px 8px; font-size: 12.5px; border-radius: 6px; }
+.it-row .col-num { text-align: center; font-size: 12px; color: var(--muted); }
+.it-row .col-name { text-align: left; }
+.it-row .col-qty, .it-row .col-unit, .it-row .col-price { text-align: center; }
+.col-cmp button { width: 100%; background: #fff; border: 0.5px solid var(--line); color: var(--muted); font: inherit; cursor: pointer; }
+.col-cmp button.on { background: var(--accent-soft); color: #48582e; border-color: var(--accent); font-weight: 500; }
+.i-muted { text-align: center; font-size: 11px; color: var(--muted); }
+.col-self { text-align: center; }
+.col-self input { width: 16px; height: 16px; cursor: pointer; }
+.it-row .i-del { background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 0; }
+.add-row-link { background: none; border: none; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; padding: 4px; }
+.item-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+@media (max-width: 760px) {
+  .items-table { overflow-x: auto; }
+  .it-head, .it-row { min-width: 720px; }
 }
