@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
-import { STATUSES, ETA_TIMES, fmt, nextJobNo, saveJob, deleteJob, calcTotal, notifyLine, loadVendor, saveVendor, loadRequesters } from './lib.js'
+import { STATUSES, ETA_TIMES, fmt, nextJobNo, saveJob, deleteJob, calcTotal, notifyLine, loadVendor, saveVendor, loadBuyerTags } from './lib.js'
 
 const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {}, ship_date: '' })
 
@@ -13,7 +13,7 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [err, setErr] = useState('')
   const [newShop, setNewShop] = useState('')
   const [origStatus, setOrigStatus] = useState('')
-  const [requesterList, setRequesterList] = useState([])
+  const [buyerList, setBuyerList] = useState([])
   const [vendors, setVendors] = useState({})  // { ชื่อร้าน: {full_name, branch, address, tax_id} }
   const [oneShop, setOneShop] = useState('')
   const [pasteBox, setPasteBox] = useState(false)
@@ -22,7 +22,7 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [showMore, setShowMore] = useState(false)
 
   useEffect(() => { init() }, [jobId])
-  useEffect(() => { loadRequesters().then(setRequesterList) }, [])
+  useEffect(() => { loadBuyerTags().then(setBuyerList) }, [])
 
   // หาทุกร้านที่จะออก PO: ร้านที่เลือก (เทียบราคา) + ร้านสั่งตรงทุกร้านในรายการ
   const poShops = [...new Set([
@@ -200,8 +200,8 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
           <Field label="คนไปรับของ (แจ้งเตือนไลน์)">
             <select value={job.requester_id||''} onChange={e=>set('requester_id',e.target.value)}>
               <option value="">— ไม่ tag ใคร —</option>
-              {requesterList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              {job.requester_id && !requesterList.some(r=>r.id===job.requester_id) && <option value={job.requester_id}>{job.requester||'(ผู้ขอเดิม)'}</option>}
+              {buyerList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {job.requester_id && !buyerList.some(r=>r.id===job.requester_id) && <option value={job.requester_id}>{job.requester||'(คนเดิม)'}</option>}
             </select>
           </Field>
         </div>
