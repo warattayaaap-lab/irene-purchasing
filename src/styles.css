@@ -189,3 +189,37 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .tag-pick { justify-content: space-between; }
 .hide-btn { background: none; border: 1px solid var(--line); color: var(--muted); font-size: 12px; padding: 4px 10px; border-radius: 7px; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .hide-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ===== Layout เมนูซ้าย ===== */
+.app-shell { display: flex; min-height: 100vh; }
+.app-main { flex: 1; min-width: 0; }
+.app-main .wrap { max-width: 100%; }
+
+.sidebar { width: 180px; flex-shrink: 0; background: var(--sidebar); border-right: 0.5px solid var(--line); display: flex; flex-direction: column; }
+.sidebar-head { padding: 18px 16px; border-bottom: 0.5px solid var(--line); display: flex; align-items: center; gap: 8px; }
+.sidebar-logo { font-size: 20px; }
+.sidebar-title { font-size: 16px; font-weight: 600; color: var(--ink); }
+.sidebar-nav { padding: 10px 8px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.sidebar-foot { padding: 10px 8px; border-top: 0.5px solid var(--line); }
+.sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: none; border: none; font: inherit; font-size: 13.5px; color: var(--muted); cursor: pointer; width: 100%; text-align: left; }
+.sidebar-item:hover { background: rgba(0,0,0,0.04); }
+.sidebar-item.on { background: var(--sidebar-active); color: #fff; font-weight: 500; }
+.sidebar-icon { font-size: 16px; }
+
+@media (max-width: 720px) {
+  .app-shell { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
+  .sidebar-head { display: none; }
+  .sidebar-nav { flex-direction: row; padding: 8px; }
+  .sidebar-foot { border-top: none; border-left: 0.5px solid var(--line); }
+  .sidebar-item span:not(.sidebar-icon) { display: none; }
+}
+
+/* ===== การ์ดสรุป 3 อัน ===== */
+.stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-c { border-radius: 10px; padding: 12px 14px; cursor: pointer; }
+.stat-c-label { font-size: 12.5px; margin-bottom: 3px; }
+.stat-c-num { font-size: 22px; font-weight: 600; }
+.stat-danger { background: #f0ddd8; } .stat-danger .stat-c-label { color: #a05545; } .stat-danger .stat-c-num { color: #8a4030; }
+.stat-new { background: #e3e9d5; } .stat-new .stat-c-label { color: #5c6e3d; } .stat-new .stat-c-num { color: #48582e; }
+.stat-wait { background: #f3e7cf; } .stat-wait .stat-c-label { color: #997a35; } .stat-wait .stat-c-num { color: #7a5f24; }
