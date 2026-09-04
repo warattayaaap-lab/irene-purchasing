@@ -18,6 +18,8 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [oneShop, setOneShop] = useState('')
   const [pasteBox, setPasteBox] = useState(false)
   const [pasteText, setPasteText] = useState('')
+  const [zoomImg, setZoomImg] = useState(null)
+  const [showMore, setShowMore] = useState(false)
 
   useEffect(() => { init() }, [jobId])
   useEffect(() => { loadRequesters().then(setRequesterList) }, [])
@@ -188,28 +190,37 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
 
       {err && <div className="panel" style={{color:'var(--danger)', marginBottom:12}}>{err}</div>}
 
-      {/* ข้อมูลงาน */}
+      {/* สเต็ป 1 — ข้อมูลงาน */}
       <div className="card-box">
-        <div className="grid4">
+        <div className="step-head"><span className="step-num">1</span><span className="step-title">ข้อมูลงาน</span></div>
+        <div className="grid2">
           <Field label="ผู้ขอ"><input value={job.requester} onChange={e=>set('requester',e.target.value)} placeholder="ช่าง / ชื่อคนขอ" /></Field>
-          <Field label="แจ้งเตือน (tag) ในไลน์">
+          <Field label="โปรเจกต์ / บ้าน"><input value={job.project} onChange={e=>set('project',e.target.value)} placeholder="เช่น บ้านเจมส์" /></Field>
+          <Field label="สถานะ"><select value={job.status} onChange={e=>set('status',e.target.value)}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></Field>
+          <Field label="คนไปรับของ (แจ้งเตือนไลน์)">
             <select value={job.requester_id||''} onChange={e=>set('requester_id',e.target.value)}>
               <option value="">— ไม่ tag ใคร —</option>
               {requesterList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               {job.requester_id && !requesterList.some(r=>r.id===job.requester_id) && <option value={job.requester_id}>{job.requester||'(ผู้ขอเดิม)'}</option>}
             </select>
           </Field>
-          <Field label="โปรเจกต์ / บ้าน"><input value={job.project} onChange={e=>set('project',e.target.value)} placeholder="เช่น บ้านเจมส์" /></Field>
-          <Field label="สถานะ"><select value={job.status} onChange={e=>set('status',e.target.value)}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></Field>
-          <Field label="เลข PO / บิล (ถ้ามี)"><input value={job.po_no} onChange={e=>set('po_no',e.target.value)} placeholder="จาก PEAK หรือเลขบิล" /></Field>
-          <Field label="การรับของ"><select value={job.delivery} onChange={e=>set('delivery',e.target.value)}><option value="">ร้านจัดส่ง</option><option>ไปรับเอง</option></select></Field>
-          <Field label="ต้องการใช้ (หน้างานระบุ)"><input type="date" value={job.need_by||''} onChange={e=>set('need_by',e.target.value)} /></Field>
-          <Field label="ใครเป็นคนสั่ง"><select value={job.order_by} onChange={e=>set('order_by',e.target.value)}><option value="">จัดซื้อสั่ง</option><option>หน้างานสั่งเอง</option></select></Field>
         </div>
-        <div className="grid2" style={{marginTop:12}}>
+        <div style={{marginTop:12}}>
           <Field label="ใช้ทำอะไร"><input value={job.purpose} onChange={e=>set('purpose',e.target.value)} placeholder="เช่น งานก่อฉาบชั้น 2" /></Field>
-          <Field label="หมายเหตุ"><input value={job.note} onChange={e=>set('note',e.target.value)} placeholder="เช่น ของด่วน" /></Field>
         </div>
+
+        <button className="more-toggle" onClick={()=>setShowMore(m=>!m)}>
+          {showMore ? '▾' : '▸'} ข้อมูลเพิ่มเติม (เลข PO, หมายเหตุ, การรับของ)
+        </button>
+        {showMore && (
+          <div className="grid2" style={{marginTop:10}}>
+            <Field label="เลข PO / บิล (ถ้ามี)"><input value={job.po_no} onChange={e=>set('po_no',e.target.value)} placeholder="จาก PEAK หรือเลขบิล" /></Field>
+            <Field label="ใครเป็นคนสั่ง"><select value={job.order_by} onChange={e=>set('order_by',e.target.value)}><option value="">จัดซื้อสั่ง</option><option>หน้างานสั่งเอง</option></select></Field>
+            <Field label="ต้องการใช้ (หน้างานระบุ)"><input type="date" value={job.need_by||''} onChange={e=>set('need_by',e.target.value)} /></Field>
+            <Field label="หมายเหตุ"><input value={job.note} onChange={e=>set('note',e.target.value)} placeholder="เช่น ของด่วน" /></Field>
+          </div>
+        )}
+
         <div className="unpaid-box">
           <label className="unpaid-check">
             <input type="checkbox" checked={!!job.unpaid} onChange={e=>set('unpaid',e.target.checked)} />
@@ -270,9 +281,8 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
             {job.images.map((im,i)=>(
               <div key={i} style={{position:'relative'}}>
-                <a href={imgSrc(im)} target="_blank" rel="noreferrer">
-                  <img src={imgSrc(im)} alt={'รูป '+(i+1)} style={{width:96,height:96,objectFit:'cover',borderRadius:10,border:'1px solid var(--line)'}} />
-                </a>
+                <img src={imgSrc(im)} alt={'รูป '+(i+1)} onClick={()=>setZoomImg(imgSrc(im))}
+                  style={{width:96,height:96,objectFit:'cover',borderRadius:10,border:'1px solid var(--line)',cursor:'zoom-in'}} />
                 <b onClick={()=>delImage(i)} style={{position:'absolute',top:-8,right:-8,background:'#fff',border:'1px solid var(--line)',borderRadius:'50%',width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14}}>×</b>
               </div>
             ))}
@@ -281,6 +291,14 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
           <div style={{textAlign:'center',color:'var(--muted)',padding:'18px',border:'1px dashed var(--line)',borderRadius:10}}>📷 ยังไม่มีรูปแนบ (รูปจากหน้างานจะมาโผล่ที่นี่)</div>
         )}
       </div>
+
+      {/* popup ขยายรูป — กดพื้นดำหรือปุ่ม × เพื่อปิด */}
+      {zoomImg && (
+        <div onClick={()=>setZoomImg(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,cursor:'zoom-out'}}>
+          <span style={{position:'absolute',top:16,right:20,color:'#fff',fontSize:32,cursor:'pointer',lineHeight:1}}>×</span>
+          <img src={zoomImg} alt="รูปขยาย" onClick={(e)=>e.stopPropagation()} style={{maxWidth:'92%',maxHeight:'92%',objectFit:'contain',borderRadius:8}} />
+        </div>
+      )}
 
       {/* เทียบราคา — panel แยก แบบในรูป */}
       {compareItems.length > 0 && (
