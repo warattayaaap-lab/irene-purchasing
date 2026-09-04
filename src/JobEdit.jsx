@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
 import { STATUSES, ETA_TIMES, fmt, nextJobNo, saveJob, deleteJob, calcTotal, notifyLine, loadVendor, saveVendor, loadBuyerTags } from './lib.js'
 
-const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {}, ship_date: '', self_buy: false })
+const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {}, ship_date: '', self_buy: false, deliver: 'ส่ง' })
 
 export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [job, setJob] = useState(null)
@@ -20,6 +20,8 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [pasteText, setPasteText] = useState('')
   const [zoomImg, setZoomImg] = useState(null)
   const [showMore, setShowMore] = useState(false)
+  const [allDeliver, setAllDeliver] = useState('ส่ง')
+  const [allShipDate, setAllShipDate] = useState('')
 
   useEffect(() => { init() }, [jobId])
   useEffect(() => { loadBuyerTags().then(setBuyerList) }, [])
@@ -125,6 +127,11 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
     if (!sh) return
     setItems(arr => arr.map(it => ({ ...it, compare: false, shop: sh })))
     set('chosen_shop', '')
+  }
+
+  // ตั้งวิธีรับของ + วันที่ให้ทุกรายการทีเดียว
+  function applyAllDeliver() {
+    setItems(arr => arr.map(it => ({ ...it, deliver: allDeliver, ship_date: allShipDate || it.ship_date })))
   }
 
   // วางรายการจากข้อความไลน์ (บรรทัดละรายการ)
@@ -237,6 +244,16 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
         <div className="step-head"><span className="step-num">2</span><span className="step-title">รายการของ</span>
           <span className="step-hint">ติ๊ก "เทียบ" ถ้าขอหลายร้าน · "ซื้อเอง" ถ้าหน้างานไปซื้อ</span></div>
 
+        <div className="all-deliver">
+          <span className="hint">ตั้งทั้งงานทีเดียว:</span>
+          <select value={allDeliver} onChange={e=>setAllDeliver(e.target.value)} style={{width:'auto'}}>
+            <option value="ส่ง">🚚 ร้านส่ง</option>
+            <option value="รับเอง">🏃 ไปรับเอง</option>
+          </select>
+          <input type="date" value={allShipDate} onChange={e=>setAllShipDate(e.target.value)} style={{width:'auto'}} />
+          <button className="mini-btn" onClick={applyAllDeliver}>ใช้กับทุกรายการ</button>
+        </div>
+
         <div className="items-table">
           <div className="it-head">
             <span className="col-num">#</span>
@@ -267,7 +284,13 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
                 </>
               )}
               <span className="col-self">{!it.compare && <input type="checkbox" checked={!!it.self_buy} onChange={e=>setItem(it._k,'self_buy',e.target.checked)} title="หน้างานซื้อเอง" />}</span>
-              <input className="col-ship" type="date" value={it.ship_date||''} onChange={e=>setItem(it._k,'ship_date',e.target.value)} title="วันส่ง/วันรับ" />
+              <span className="col-ship">
+                <select className="ship-mode" value={it.deliver||'ส่ง'} onChange={e=>setItem(it._k,'deliver',e.target.value)} title="วิธีรับของ">
+                  <option value="ส่ง">🚚</option>
+                  <option value="รับเอง">🏃</option>
+                </select>
+                <input className="ship-date" type="date" value={it.ship_date||''} onChange={e=>setItem(it._k,'ship_date',e.target.value)} title="วันส่ง/วันรับ" />
+              </span>
               <button className="col-del i-del" onClick={()=>delItem(it._k)}>×</button>
             </div>
           ))}
