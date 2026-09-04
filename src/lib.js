@@ -204,3 +204,13 @@ export async function loadRequesters() {
   return Object.entries(map).map(([name, id]) => ({ id, name, key: name }))
     .sort((a, b) => a.name.localeCompare(b.name, 'th'))
 }
+
+// โหลดรายชื่อคนไปรับของ/tag จากที่ตั้งค่าไว้ในหน้าตั้งค่า (buyer_tags)
+export async function loadBuyerTags() {
+  const { data } = await supabase.from('settings').select('value').eq('key', 'buyer_tags').maybeSingle()
+  if (!data || !data.value) return []
+  try {
+    const arr = JSON.parse(data.value)
+    return arr.filter(t => t && t.id && t.name).map(t => ({ id: t.id, name: t.name }))
+  } catch { return [] }
+}
