@@ -348,7 +348,7 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
       {/* เทียบราคา — panel แยก แบบในรูป */}
       {compareItems.length > 0 && (
         <div className="card-box compare-box">
-          <div className="box-title">เปรียบเทียบราคา <span className="hint">(เฉพาะรายการที่ติ๊กเทียบ)</span></div>
+          <div className="step-head"><span className="step-num">3</span><span className="step-title">เปรียบเทียบราคา</span><span className="step-hint">เฉพาะรายการที่ติ๊กเทียบ</span></div>
           <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
             {shops.map(s => (
               <span key={s} className="chip on" style={{display:'flex',gap:6,alignItems:'center'}}>{s}<b style={{cursor:'pointer'}} onClick={()=>removeShop(s)}>×</b></span>
@@ -424,8 +424,8 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
       {/* พาเนลใบสั่งซื้อ PO — โผล่เมื่อมีร้าน (แยกกล่องต่อร้าน กรณีหลายร้าน) */}
       {poShops.length > 0 && (
         <div className="card-box">
-          <div className="box-title">ใบสั่งซื้อ (PO)
-            {poShops.length > 1 && <span className="hint"> — งานนี้สั่ง {poShops.length} ร้าน ออก PO แยกใบ</span>}
+          <div className="step-head"><span className="step-num">4</span><span className="step-title">ใบสั่งซื้อ (PO)</span>
+            {poShops.length > 1 && <span className="step-hint">สั่ง {poShops.length} ร้าน ออก PO แยกใบ</span>}
           </div>
           {poShops.map(sh => {
             const vd = vendors[sh] || { full_name:'', branch:'', address:'', tax_id:'' }
@@ -437,17 +437,9 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
                     <input type="checkbox" checked={isNoPo(sh)} onChange={()=>toggleNoPo(sh)} />
                     ไม่เปิด PO ร้านนี้
                   </label>
-                  <select className="shop-deliv" value={(job.shop_delivery||{})[sh]||'ส่ง'} onChange={e=>set('shop_delivery',{...(job.shop_delivery||{}),[sh]:e.target.value})}>
-                    <option value="ส่ง">🚚 ร้านจัดส่ง</option>
-                    <option value="รับเอง">🏃 ไปรับเอง</option>
-                  </select>
-                  <div className="shop-eta">
-                    <label>📦 {((job.shop_delivery||{})[sh]==='รับเอง')?'วันเข้ารับ':'วันส่งของ'}ร้านนี้</label>
-                    <input type="date" value={(job.shop_eta||{})[sh]||''} onChange={e=>set('shop_eta',{...(job.shop_eta||{}),[sh]:e.target.value})} />
-                  </div>
                 </div>
                 {isNoPo(sh)
-                  ? <p className="hint" style={{margin:0}}>ร้านนี้ไม่ต้องออก PO — ยังระบุวันส่ง + แจ้งไลน์ได้ปกติ</p>
+                  ? <p className="hint" style={{margin:0}}>ร้านนี้ไม่ต้องออก PO (วันส่ง/รับ ตั้งที่รายการของด้านบน)</p>
                   : (
                 <div className="grid2">
                   <Field label="ชื่อเต็มบริษัทผู้ขาย"><input value={vd.full_name||''} onChange={e=>setVendorField(sh,'full_name',e.target.value)} placeholder="เช่น บริษัท วีระพานิช เชียงใหม่ จำกัด" /></Field>
