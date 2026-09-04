@@ -236,3 +236,33 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .i-self { background: #fff; border: 0.5px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .i-self.on { background: #b8845a; color: #fff; border-color: #b8845a; font-weight: 500; }
 .i-price-self { width: 90px; flex-shrink: 0; text-align: right; font-size: 12px; color: var(--danger); padding: 8px 4px; }
+
+/* ===== ตารางรายการของ (grid มีหัวคอลัมน์) ===== */
+.items-table { border: 0.5px solid var(--line); border-radius: 10px; overflow: hidden; }
+.it-head, .it-row {
+  display: grid;
+  grid-template-columns: 24px minmax(120px,1fr) 56px 52px 60px 90px 68px 56px 116px 24px;
+  gap: 6px; align-items: center; padding: 8px 10px;
+}
+.it-head { background: #f1eee2; font-size: 11px; color: var(--muted); }
+.it-row { border-top: 0.5px solid #f0ede0; }
+.it-row:nth-child(odd) { background: #fdfcf7; }
+.it-head span { text-align: center; }
+.it-head .col-name { text-align: left; }
+.it-row input, .it-row .col-cmp button { padding: 7px 8px; font-size: 12.5px; border-radius: 6px; }
+.it-row .col-num { text-align: center; font-size: 12px; color: var(--muted); }
+.it-row .col-name { text-align: left; }
+.it-row .col-qty, .it-row .col-unit, .it-row .col-price { text-align: center; }
+.col-cmp button { width: 100%; background: #fff; border: 0.5px solid var(--line); color: var(--muted); font: inherit; cursor: pointer; }
+.col-cmp button.on { background: var(--accent-soft); color: #48582e; border-color: var(--accent); font-weight: 500; }
+.i-muted { text-align: center; font-size: 11px; color: var(--muted); }
+.col-self { text-align: center; }
+.col-self input { width: 16px; height: 16px; cursor: pointer; }
+.it-row .i-del { background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 0; }
+.add-row-link { background: none; border: none; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; padding: 4px; }
+.item-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+@media (max-width: 760px) {
+  .items-table { overflow-x: auto; }
+  .it-head, .it-row { min-width: 720px; }
+}
