@@ -18,7 +18,7 @@ function daysSince(d) {
   return Math.floor((Date.now() - dt.getTime()) / 86400000)
 }
 
-export default function JobList({ onOpen, onPrice, onSettings }) {
+export default function JobList({ onOpen, onPrice, onSettings, backupSignal }) {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -29,6 +29,7 @@ export default function JobList({ onOpen, onPrice, onSettings }) {
   const [dateFilter, setDateFilter] = useState('')  // YYYY-MM-DD
 
   useEffect(() => { loadJobs() }, [])
+  useEffect(() => { if (backupSignal) handleBackup() }, [backupSignal])
 
   async function loadJobs() {
     setLoading(true); setError('')
@@ -121,16 +122,29 @@ export default function JobList({ onOpen, onPrice, onSettings }) {
   const groups = {}
   filtered.forEach(j => { const st = j.status || 'ใหม่'; (groups[st] = groups[st] || []).push(j) })
   const forceOpen = !!(kw || filter)
+  const staleCount = jobs.filter(j => (j.status==='ใหม่'||j.status==='กำลังขอราคา') && daysSince(j.job_date) >= 2).length
+  const newCount = jobs.filter(j => j.status === 'ใหม่').length
+  const waitCount = jobs.filter(j => j.status === 'กำลังขอราคา').length
 
   return (
     <div className="wrap">
       <div className="top">
-        <h1>ระบบจัดซื้อ</h1>
-        <div className="top-btns">
-          <button className="btn ghost" onClick={onPrice}>🔍 ค้นราคา</button>
-          <button className="btn ghost" onClick={handleBackup} disabled={backing}>{backing?'กำลังสำรอง…':'💾 สำรอง'}</button>
-          <button className="btn ghost" onClick={onSettings}>⚙️</button>
-          <button className="btn" onClick={() => onOpen('new')}>+ งานใหม่</button>
+        <h1>งานจัดซื้อ</h1>
+        <button className="btn" onClick={() => onOpen('new')}>+ งานใหม่</button>
+      </div>
+
+      <div className="stat-cards">
+        <div className="stat-c stat-danger" onClick={()=>setFilter('')}>
+          <div className="stat-c-label">ค้างนาน</div>
+          <div className="stat-c-num">{staleCount}</div>
+        </div>
+        <div className="stat-c stat-new" onClick={()=>setFilter('ใหม่')}>
+          <div className="stat-c-label">งานใหม่</div>
+          <div className="stat-c-num">{newCount}</div>
+        </div>
+        <div className="stat-c stat-wait" onClick={()=>setFilter('กำลังขอราคา')}>
+          <div className="stat-c-label">กำลังขอราคา</div>
+          <div className="stat-c-num">{waitCount}</div>
         </div>
       </div>
 
