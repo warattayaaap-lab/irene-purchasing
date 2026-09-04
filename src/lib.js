@@ -94,7 +94,7 @@ export async function saveJob(job, items) {
   const rows = items.filter(it => String(it.name || '').trim()).map((it, i) => ({
     job_id: jobId, name: it.name, qty: Number(it.qty) || 0, unit: it.unit || '',
     compare: !!it.compare, shop: it.shop || '', price: Number(it.price) || 0,
-    quotes: it.quotes || {}, sort_order: i, ship_date: it.ship_date || null,
+    quotes: it.quotes || {}, sort_order: i, ship_date: it.ship_date || null, self_buy: !!it.self_buy,
   }))
   if (rows.length) {
     const { error } = await supabase.from('job_items').insert(rows)
