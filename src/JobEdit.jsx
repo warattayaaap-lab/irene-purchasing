@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase.js'
 import { STATUSES, ETA_TIMES, fmt, nextJobNo, saveJob, deleteJob, calcTotal, notifyLine, loadVendor, saveVendor, loadBuyerTags } from './lib.js'
 
-const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {}, ship_date: '' })
+const blankItem = () => ({ _k: Math.random().toString(36).slice(2), name: '', qty: '', unit: '', compare: false, shop: '', price: '', quotes: {}, ship_date: '', self_buy: false })
 
 export default function JobEdit({ jobId, onBack, onOpenPO }) {
   const [job, setJob] = useState(null)
@@ -232,11 +232,13 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
         </div>
       </div>
 
-      {/* รายการของ — แบบช่องยาว */}
+      {/* สเต็ป 2 — รายการของ */}
       <div className="card-box">
-        <div className="box-title">รายการของ <span className="hint">— ติ๊ก "เทียบ" เฉพาะรายการที่ต้องขอราคาหลายเจ้า</span></div>
-        {items.map(it => (
+        <div className="step-head"><span className="step-num">2</span><span className="step-title">รายการของ</span>
+          <span className="step-hint">ติ๊ก "เทียบ" ถ้าขอหลายร้าน · "ซื้อเอง" ถ้าหน้างานไปซื้อ</span></div>
+        {items.map((it, idx) => (
           <div className="item-row" key={it._k}>
+            <span className="i-num">{idx+1}</span>
             <input className="i-name" value={it.name} onChange={e=>setItem(it._k,'name',e.target.value)} placeholder="ชื่อของ" />
             <input className="i-qty" value={it.qty} onChange={e=>setItem(it._k,'qty',e.target.value)} type="number" placeholder="จำนวน" />
             <input className="i-unit" value={it.unit} onChange={e=>setItem(it._k,'unit',e.target.value)} placeholder="หน่วย" />
@@ -244,10 +246,12 @@ export default function JobEdit({ jobId, onBack, onOpenPO }) {
             {!it.compare ? (
               <>
                 <input className="i-shop" value={it.shop} onChange={e=>setItem(it._k,'shop',e.target.value)} placeholder="ร้านที่สั่ง" />
-                <input className="i-price" value={it.price} onChange={e=>setItem(it._k,'price',e.target.value)} type="number" placeholder="ราคา/หน่วย" />
+                {!it.self_buy && <input className="i-price" value={it.price} onChange={e=>setItem(it._k,'price',e.target.value)} type="number" placeholder="ราคา/หน่วย" />}
+                {it.self_buy && <span className="i-price-self">รอบิล</span>}
+                <button className={'i-self'+(it.self_buy?' on':'')} onClick={()=>setItem(it._k,'self_buy',!it.self_buy)} title="หน้างานไปซื้อเอง ไม่ต้องกรอกราคา">{it.self_buy?'✓ ซื้อเอง':'ซื้อเอง'}</button>
               </>
             ) : <span className="i-cmpnote">ใช้ราคาเทียบด้านล่าง</span>}
-            <input className="i-ship" type="date" value={it.ship_date||''} onChange={e=>setItem(it._k,'ship_date',e.target.value)} title="วันส่งของรายการนี้" />
+            <input className="i-ship" type="date" value={it.ship_date||''} onChange={e=>setItem(it._k,'ship_date',e.target.value)} title="วันส่ง/วันรับของรายการนี้" />
             <button className="i-del" onClick={()=>delItem(it._k)}>×</button>
           </div>
         ))}
