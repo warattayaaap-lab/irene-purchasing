@@ -266,3 +266,10 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
   .items-table { overflow-x: auto; }
   .it-head, .it-row { min-width: 720px; }
 }
+
+/* ===== วิธีรับของต่อรายการ + ตั้งทั้งงาน ===== */
+.col-ship { display: flex; gap: 3px; align-items: center; }
+.ship-mode { width: 42px !important; padding: 6px 2px !important; font-size: 13px; flex-shrink: 0; }
+.ship-date { flex: 1; min-width: 0; padding: 6px 4px !important; font-size: 11.5px !important; }
+.all-deliver { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; padding: 8px 10px; background: #f1eee2; border-radius: 8px; }
+.all-deliver select, .all-deliver input { padding: 6px 8px; font-size: 12.5px; }
